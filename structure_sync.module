@@ -1,56 +1,54 @@
 <?php
 
 /**
- *
  * @file
- * Structure Sync
+ * Structure Sync.
  *
  * Interface to synchronise structural data that is stored as content, like
  * Taxonomy terms and custom blocks.
- *
  */
 
 /**
  * Helper function for mass adding of terms.
  *
- * @param $input
+ * @param string $input
  *   The textual input with terms. Each line contains a single term. Child term
  *   can be prefixed with a dash '-' (one dash for each level). Term names
  *   starting with a dash and should not become a child term need to be wrapped
  *   in quotes.
- * @param $vid
+ * @param string $vid
  *   The vocabulary id.
  * @param int $parents
  *   An array of parent term ids for the new inserted terms. Can be 0.
- * @param $lang
+ * @param string $lang
  *   The i18n language, if i18n exists.
- * @param $term_names_too_long
+ * @param array $term_names_too_long
  *   Return value that is used to indicate that some term names were too long
  *   and truncated to 255 characters.
  *
  * @return array
  *   An array of the newly inserted term objects.
  */
-function structure_sync_mass_add_terms($input, $vid, $parents, $lang = "", &$term_names_too_long = array()) {
-  $new_terms = array();
+function structure_sync_mass_add_terms($input, $vid, $parents, $lang = "", array &$term_names_too_long = []) {
+  $new_terms = [];
   $terms = explode("\n", str_replace("\r", '', $input));
   $parents = count($parents) ? $parents : 0;
 
   // Stores the current lineage of newly inserted terms.
-  $last_parents = array();
+  $last_parents = [];
   foreach ($terms as $name) {
     if (empty($name)) {
       continue;
     }
-    $matches = array();
-    // Child term prefixed with one or more dashes
+    $matches = [];
+    // Child term prefixed with one or more dashes.
     if (preg_match('/^(-){1,}/', $name, $matches)) {
       $depth = strlen($matches[0]);
       $name = substr($name, $depth);
-      $current_parents = isset($last_parents[$depth-1]) ? $last_parents[$depth-1]->tid : 0;
+      $current_parents = isset($last_parents[$depth - 1]) ? $last_parents[$depth - 1]->tid : 0;
     }
     // Parent term containing dashes at the beginning and is therefore wrapped
-    // in double quotes
+    // in double quotes.
     elseif (preg_match('/^\"(-){1,}.*\"/', $name, $matches)) {
       $name = substr($name, 1, -1);
       $depth = 0;
@@ -66,7 +64,7 @@ function structure_sync_mass_add_terms($input, $vid, $parents, $lang = "", &$ter
       $name = substr($name, 0, 255);
     }
 
-    $term = new stdClass;
+    $term = new stdClass();
     $term->name = $name;
     $term->vid = $vid;
     $term->parent = $current_parents;
@@ -113,12 +111,12 @@ function taxonomy_manager_export_ajax_callback($form, $form_state) {
 }
 
 /**
- * Generates the CVS Ouput
+ * Generates the CSV output.
  */
 function taxonomy_manager_export_csv($tree, $delimiter = ";") {
   $output = "";
   foreach ($tree as $term) {
-    $array = array();
+    $array = [];
     $array[] = '"' . $term->vid . '"';
     $array[] = '"' . $term->tid . '"';
     $array[] = '"' . $term->name . '"';
