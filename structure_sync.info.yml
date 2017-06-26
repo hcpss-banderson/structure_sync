@@ -1,0 +1,8 @@
+name: 'Structure Sync'
+description: 'Tool for syncing structural data that is stored as content.'
+core: 8.x
+dependencies:
+  - taxonomy
+package: Structure
+type: module
+configure: structure_sync.admin

@@ -1,0 +1,5 @@
+structure_sync.settings:
+  title: Structure sync
+  description: 'Sync structural data that is stored as content.'
+  parent: system.admin_structure
+  route_name: structure_sync.admin
