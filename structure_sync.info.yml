@@ -5,4 +5,3 @@ dependencies:
   - taxonomy
 package: Structure
 type: module
-configure: structure_sync.admin

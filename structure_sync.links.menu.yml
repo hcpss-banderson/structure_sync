@@ -1,5 +1,5 @@
-structure_sync.settings:
-  title: Structure sync
-  description: 'Sync structural data that is stored as content.'
+structure_sync.taxonomies:
+  title: Taxonomy sync
+  description: 'Sync taxonomies that are stored as content.'
   parent: system.admin_structure
-  route_name: structure_sync.admin
+  route_name: structure_sync.taxonomies

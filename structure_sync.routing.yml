@@ -1,7 +1,7 @@
-structure_sync.admin:
-  path: '/admin/structure/structure-sync'
+structure_sync.taxonomies:
+  path: '/admin/structure/structure-sync/taxonomies'
   defaults:
-    _controller: '\Drupal\structure_sync\Controller\MainController::listVocabularies'
+    _form: '\Drupal\structure_sync\Form\taxonomySyncForm'
     _title: 'Structure Sync'
   requirements:
     _permission: 'administer taxonomy'
