@@ -1,7 +1,7 @@
-structure_sync.taxonomies:
-  path: '/admin/structure/structure-sync/taxonomies'
+structure_sync:
+  path: '/admin/structure/structure-sync'
   defaults:
-    _form: '\Drupal\structure_sync\Form\taxonomySyncForm'
+    _form: '\Drupal\structure_sync\Form\StructureSyncForm'
     _title: 'Structure Sync'
   requirements:
-    _permission: 'administer taxonomy'
+    _permission: 'administer site configuration'

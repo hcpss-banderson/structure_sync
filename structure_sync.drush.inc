@@ -1,8 +1,10 @@
 <?php
 
 /**
- * @file Drush commands for .
+ * @file Drush commands for syncing structure content.
  */
+
+use Drupal\structure_sync\Controller;
 
 /**
  * Implements hook_drush_command().
