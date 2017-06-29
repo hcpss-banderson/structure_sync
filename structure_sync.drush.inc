@@ -4,7 +4,7 @@
  * @file Drush commands for syncing structure content.
  */
 
-use Drupal\structure_sync\Controller;
+use Drupal\structure_sync\StructureSyncHelper;
 
 /**
  * Implements hook_drush_command().
@@ -42,44 +42,7 @@ function structure_sync_drush_command() {
 function drush_structure_sync_export_taxonomies() {
   drush_print('Exporting taxonomies...');
 
-  $vocabulary_list = array();
-  $vocabularies = Drupal::entityTypeManager()->getStorage('taxonomy_vocabulary')->loadMultiple();
-  foreach ($vocabularies as $vocabulary) {
-    $vocabulary_list[] = $vocabulary->id();
-  }
-  if (!count($vocabulary_list)) {
-    drush_log('No vocabularies available', 'warning');
-    return;
-  }
-
-  $config = \Drupal::service('config.factory')->getEditable('structure_sync.data');
-  $config->clear('taxonomies')->save();
-
-  foreach ($vocabulary_list as $vocabulary) {
-    $query = \Drupal::database()->select('taxonomy_term_field_data', 'ttfd');
-    $query->fields('ttfd', [
-      'tid',
-      'name',
-      'langcode',
-      'description__value',
-      'description__format',
-      'weight',
-      'changed',
-      'default_langcode',
-    ]);
-    $query->addField('tth', 'parent');
-    $query->join('taxonomy_term_hierarchy', 'tth', 'ttfd.tid = tth.tid');
-    $query->addField('ttd', 'uuid');
-    $query->join('taxonomy_term_data', 'ttd', 'ttfd.tid = ttd.tid');
-    $query->condition('ttfd.vid', $vocabulary);
-    $taxonomies = $query->execute()->fetchAll();
-
-    $config
-      ->set('taxonomies' . '.' . $vocabulary, json_decode(json_encode($taxonomies), TRUE))
-      ->save();
-
-    drush_print('Exported ' . $vocabulary);
-  }
+  StructureSyncHelper::ExportTaxonomies();
 
   drush_log('Successfully exported taxonomies', 'ok');
 }
@@ -91,6 +54,9 @@ function drush_structure_sync_export_taxonomies() {
  */
 function drush_structure_sync_import_taxonomies() {
   drush_print('Importing taxonomies...');
+
+  StructureSyncHelper::ImportTaxonomies(['style' => 'safe'], []);
+  return;
 
   $options = [
     'full' => 'Full',
@@ -231,42 +197,7 @@ function drush_structure_sync_import_taxonomies() {
 function drush_structure_sync_export_blocks() {
   drush_print('Exporting blocks...');
 
-  $config = \Drupal::service('config.factory')->getEditable('structure_sync.data');
-  $config->clear('blocks');
-
-  $query = \Drupal::database()->select('block_content_field_revision', 'bcfr');
-  $query->fields('bcfr', [
-    'id',
-    'revision_id',
-    'langcode',
-    'info',
-    'changed',
-    'revision_created',
-    'revision_user',
-    'revision_translation_affected',
-    'default_langcode',
-  ]);
-  $query->addField('bc', 'uuid');
-  $query->addField('bc', 'revision_id', 'rev_id_current');
-  $query->join('block_content', 'bc', 'bcfr.id = bc.id');
-  $query->addField('bcr', 'revision_log');
-  $query->join('block_content_revision', 'bcr', 'bcfr.id = bcr.id AND bcfr.revision_id = bcr.revision_id');
-  $query->addField('bcrb', 'bundle');
-  $query->addField('bcrb', 'deleted');
-  $query->addField('bcrb', 'delta');
-  $query->addField('bcrb', 'body_value');
-  $query->addField('bcrb', 'body_summary');
-  $query->addField('bcrb', 'body_format');
-  $query->join('block_content_revision__body', 'bcrb', 'bcfr.id = bcrb.entity_id AND bcfr.revision_id = bcrb.revision_id');
-  $blocks = $query->execute()->fetchAll();
-
-  $blocks = json_decode(json_encode($blocks), TRUE);
-
-  $config->set('blocks', $blocks)->save();
-
-  foreach ($blocks as $block) {
-    drush_print('Exported "' . $block['info'] . '" revision (' . $block['revision_id'] . ')');
-  }
+  StructureSyncHelper::ExportCustomBlocks();
 
   drush_log('Successfully exported blocks', 'ok');
 }

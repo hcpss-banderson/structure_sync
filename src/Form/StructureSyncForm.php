@@ -32,18 +32,51 @@ class StructureSyncForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $helper = new StructureSyncHelper();
 
-    $form['export_taxonomies'] = [
+    $form['taxonomies'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Taxonomies'),
+      '#weight' => 1,
+    ];
+
+    $form['taxonomies']['export'] = [
       '#type' => 'submit',
       '#value' => $this->t('Export all taxonomies'),
       '#name' => 'exportTaxonomies',
-      '#submit' => [[$helper, 'Test']],
+      '#button_type' => 'primary',
+      '#submit' => [[$helper, 'ExportTaxonomies']],
     ];
 
-    $form['export_blocks'] = [
+    $form['taxonomies']['import_style_tax'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Select import style'),
+      '#options' => [
+        'full' => $this->t('Full (not yet implemented)'),
+        'safe' => $this->t('Safe'),
+        'force' => $this->t('Force'),
+      ],
+      '#default_value' => 'safe',
+    ];
+
+    $form['taxonomies']['import'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Import taxonomies'),
+      '#name' => 'importTaxonomies',
+      '#button_type' => 'primary',
+      '#submit' => [[$helper, 'ImportTaxonomies']],
+    ];
+
+    $form['blocks'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Custom blocks'),
+      '#weight' => 2,
+    ];
+
+    $form['blocks']['export'] = [
       '#type' => 'submit',
       '#value' => $this->t('Export all custom blocks'),
       '#name' => 'exportBlocks',
-      '#submit' => [[$helper, 'Test']],
+      '#button_type' => 'primary',
+      '#submit' => [[$helper, 'ExportCustomBlocks']],
     ];
 
     return $form;
