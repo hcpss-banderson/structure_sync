@@ -115,7 +115,7 @@ class StructureSyncHelper {
       ->notice('Custom blocks exported');
   }
 
-  public static function ImportTaxonomies(array $form, FormStateInterface $form_state) {
+  public static function ImportTaxonomies(array $form, FormStateInterface $form_state = NULL) {
     \Drupal::logger('structure_sync')
       ->notice('Taxonomy import started');
 
@@ -271,7 +271,7 @@ class StructureSyncHelper {
     }
   }
 
-  public static function ImportCustomBlocks(array $form, FormStateInterface $form_state) {
+  public static function ImportCustomBlocks(array $form, FormStateInterface $form_state = NULL) {
     \Drupal::logger('structure_sync')
       ->notice('Custom blocks import started');
 
