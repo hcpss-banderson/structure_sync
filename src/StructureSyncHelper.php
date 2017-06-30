@@ -119,11 +119,9 @@ class StructureSyncHelper {
       ->notice('Custom blocks exported');
   }
 
-  public static function ImportTaxonomies($form, $form_state) {
+  public static function ImportTaxonomies(array $form, FormStateInterface $form_state) {
     \Drupal::logger('structure_sync')
       ->notice('Taxonomy import started');
-
-    $style = 'safe';
 
     if (is_object($form_state) && $form_state->hasValue('import_style_tax')) {
       $style = $form_state->getValue('import_style_tax');
@@ -140,18 +138,135 @@ class StructureSyncHelper {
     \Drupal::logger('structure_sync')
       ->notice('Using "' . $style . '" style for taxonomy import');
 
+    $taxonomies = \Drupal::config('structure_sync.data')
+      ->get('taxonomies');
+
+    $query = \Drupal::database();
+
     switch ($style) {
       case 'full':
         \Drupal::logger('structure_sync')
           ->warning('"Full" style not yet implemented');
 
-        // Full style is same as safe but with deletes and updates.
+        drupal_set_message(t('"Full" style not yet implemented'), 'warning');
+
+        // TODO: Full style is same as safe but with deletes and updates.
         break;
       case 'safe':
+        $queryCheck = $query->select('taxonomy_term_data', 'ttd');
+        $queryCheck->fields('ttd', ['uuid']);
+        $uuids = $queryCheck->execute()->fetchAll();
+        $uuids = array_column($uuids, 'uuid');
 
+        $queryCheck->fields('ttd', ['tid']);
+        $tids = $queryCheck->execute()->fetchAll();
+        $tids = array_column($tids, 'tid');
+
+        $parents = [];
+        foreach ($taxonomies as $vocabulary) {
+          foreach ($vocabulary as $taxonomy) {
+            $parents[] = $taxonomy['parent'];
+          }
+        }
+
+        foreach ($taxonomies as $vid => $vocabulary) {
+          foreach ($vocabulary as $taxonomy) {
+            if (!in_array($taxonomy['uuid'], $uuids)) {
+              $tid = $taxonomy['tid'];
+
+              if (in_array($tid, $tids)) {
+                $changeParent = FALSE;
+
+                if (in_array($tid, $parents)) {
+                  $changeParent = TRUE;
+                }
+
+                $tid = ((int) max($tids)) + 1;
+                $tids[] = $tid;
+
+                if ($changeParent) {
+                  foreach ($taxonomies as $voc) {
+                    foreach ($voc as $tax) {
+                      $tax['parent'] = $tid;
+                    }
+                  }
+                }
+              }
+
+              $query->insert('taxonomy_term_data')->fields([
+                'tid' => $tid,
+                'vid' => $vid,
+                'uuid' => $taxonomy['uuid'],
+                'langcode' => $taxonomy['langcode'],
+              ])->execute();
+              $query->insert('taxonomy_term_hierarchy')->fields([
+                'tid' => $tid,
+                'parent' => $taxonomy['parent'],
+              ])->execute();
+              $query->insert('taxonomy_term_field_data')->fields([
+                'tid' => $tid,
+                'vid' => $vid,
+                'langcode' => $taxonomy['langcode'],
+                'name' => $taxonomy['name'],
+                'description__value' => $taxonomy['description__value'],
+                'description__format' => $taxonomy['description__format'],
+                'weight' => $taxonomy['weight'],
+                'changed' => $taxonomy['changed'],
+                'default_langcode' => $taxonomy['default_langcode'],
+              ])->execute();
+
+              \Drupal::logger('structure_sync')
+                ->notice('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+            }
+          }
+        }
+
+        \Drupal::logger('structure_sync')
+          ->notice('Successfully imported taxonomies');
+
+        drupal_set_message(t('Successfully imported taxonomies'));
         break;
       case 'force':
+        $query->delete('taxonomy_term_field_data')->execute();
+        $query->delete('taxonomy_term_hierarchy')->execute();
+        $query->delete('taxonomy_term_data')->execute();
 
+        \Drupal::logger('structure_sync')
+          ->notice('Deleted all taxonomies');
+
+        foreach ($taxonomies as $vid => $vocabulary) {
+          foreach ($vocabulary as $taxonomy) {
+            $query->insert('taxonomy_term_data')->fields([
+              'tid' => $taxonomy['tid'],
+              'vid' => $vid,
+              'uuid' => $taxonomy['uuid'],
+              'langcode' => $taxonomy['langcode'],
+            ])->execute();
+            $query->insert('taxonomy_term_hierarchy')->fields([
+              'tid' => $taxonomy['tid'],
+              'parent' => $taxonomy['parent'],
+            ])->execute();
+            $query->insert('taxonomy_term_field_data')->fields([
+              'tid' => $taxonomy['tid'],
+              'vid' => $vid,
+              'langcode' => $taxonomy['langcode'],
+              'name' => $taxonomy['name'],
+              'description__value' => $taxonomy['description__value'],
+              'description__format' => $taxonomy['description__format'],
+              'weight' => $taxonomy['weight'],
+              'changed' => $taxonomy['changed'],
+              'default_langcode' => $taxonomy['default_langcode'],
+            ])->execute();
+
+            \Drupal::logger('structure_sync')
+              ->notice('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+          }
+        }
+
+        \Drupal::logger('structure_sync')
+          ->notice('Successfully imported taxonomies');
+
+        drupal_set_message(t('Successfully imported taxonomies'));
         break;
       default:
         \Drupal::logger('structure_sync')

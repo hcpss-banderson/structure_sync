@@ -55,9 +55,6 @@ function drush_structure_sync_export_taxonomies() {
 function drush_structure_sync_import_taxonomies() {
   drush_print('Importing taxonomies...');
 
-  StructureSyncHelper::ImportTaxonomies(['style' => 'safe'], []);
-  return;
-
   $options = [
     'full' => 'Full',
     'safe' => 'Safe',
@@ -68,6 +65,9 @@ function drush_structure_sync_import_taxonomies() {
 
   if ($choice) {
     drush_print('Using "' . $options[$choice] . '" import style');
+
+    StructureSyncHelper::ImportTaxonomies(['style' => $choice], []);
+    return;
 
     $taxonomies = \Drupal::config('structure_sync.data')
       ->get('taxonomies');
