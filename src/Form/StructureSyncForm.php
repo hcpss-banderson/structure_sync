@@ -79,6 +79,25 @@ class StructureSyncForm extends ConfigFormBase {
       '#submit' => [[$helper, 'ExportCustomBlocks']],
     ];
 
+    $form['blocks']['import_style_bls'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Select import style'),
+      '#options' => [
+        'full' => $this->t('Full (not yet implemented)'),
+        'safe' => $this->t('Safe'),
+        'force' => $this->t('Force'),
+      ],
+      '#default_value' => 'safe',
+    ];
+
+    $form['blocks']['import'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Import custom blocks'),
+      '#name' => 'importBlocks',
+      '#button_type' => 'primary',
+      '#submit' => [[$helper, 'ImportCustomBlocks']],
+    ];
+
     return $form;
   }
 }
