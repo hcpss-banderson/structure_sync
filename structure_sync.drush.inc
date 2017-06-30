@@ -36,19 +36,21 @@ function structure_sync_drush_command() {
 
 /**
  * Call back function drush_structure_sync_export_taxonomies()
+ *
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
  */
 function drush_structure_sync_export_taxonomies() {
   drush_print('Exporting taxonomies...');
 
-  StructureSyncHelper::ExportTaxonomies();
+  StructureSyncHelper::exportTaxonomies();
 
   drush_log('Successfully exported taxonomies', 'ok');
 }
 
 /**
  * Call back function drush_structure_sync_import_taxonomies()
+ *
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
  */
@@ -66,7 +68,7 @@ function drush_structure_sync_import_taxonomies() {
   if ($choice) {
     drush_print('Using "' . $options[$choice] . '" import style');
 
-    StructureSyncHelper::ImportTaxonomies(['style' => $choice]);
+    StructureSyncHelper::importTaxonomies(['style' => $choice]);
 
     drush_log('Successfully imported taxonomies', 'ok');
   }
@@ -77,19 +79,21 @@ function drush_structure_sync_import_taxonomies() {
 
 /**
  * Call back function drush_structure_sync_export_blocks()
+ *
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
  */
 function drush_structure_sync_export_blocks() {
   drush_print('Exporting blocks...');
 
-  StructureSyncHelper::ExportCustomBlocks();
+  StructureSyncHelper::exportCustomBlocks();
 
   drush_log('Successfully exported blocks', 'ok');
 }
 
 /**
  * Call back function drush_structure_sync_import_blocks()
+ *
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
  */
@@ -107,7 +111,7 @@ function drush_structure_sync_import_blocks() {
   if ($choice) {
     drush_print('Using "' . $options[$choice] . '" import style');
 
-    StructureSyncHelper::ImportCustomBlocks(['style' => $choice]);
+    StructureSyncHelper::importCustomBlocks(['style' => $choice]);
 
     drush_log('Successfully imported custom blocks', 'ok');
   }

@@ -10,6 +10,7 @@ use Drupal\structure_sync\StructureSyncHelper;
  * Import and export form for taxonomy terms.
  */
 class StructureSyncForm extends ConfigFormBase {
+
   /**
    * {@inheritdoc}
    */
@@ -43,7 +44,7 @@ class StructureSyncForm extends ConfigFormBase {
       '#value' => $this->t('Export all taxonomies'),
       '#name' => 'exportTaxonomies',
       '#button_type' => 'primary',
-      '#submit' => [[$helper, 'ExportTaxonomies']],
+      '#submit' => [[$helper, 'exportTaxonomies']],
     ];
 
     $form['taxonomies']['import_style_tax'] = [
@@ -62,7 +63,7 @@ class StructureSyncForm extends ConfigFormBase {
       '#value' => $this->t('Import taxonomies'),
       '#name' => 'importTaxonomies',
       '#button_type' => 'primary',
-      '#submit' => [[$helper, 'ImportTaxonomies']],
+      '#submit' => [[$helper, 'importTaxonomies']],
     ];
 
     $form['blocks'] = [
@@ -76,7 +77,7 @@ class StructureSyncForm extends ConfigFormBase {
       '#value' => $this->t('Export all custom blocks'),
       '#name' => 'exportBlocks',
       '#button_type' => 'primary',
-      '#submit' => [[$helper, 'ExportCustomBlocks']],
+      '#submit' => [[$helper, 'exportCustomBlocks']],
     ];
 
     $form['blocks']['import_style_bls'] = [
@@ -95,9 +96,10 @@ class StructureSyncForm extends ConfigFormBase {
       '#value' => $this->t('Import custom blocks'),
       '#name' => 'importBlocks',
       '#button_type' => 'primary',
-      '#submit' => [[$helper, 'ImportCustomBlocks']],
+      '#submit' => [[$helper, 'importCustomBlocks']],
     ];
 
     return $form;
   }
+
 }

@@ -1,19 +1,22 @@
 <?php
 
-/**
- * @file Functions to sync structure content.
- */
-
 namespace Drupal\structure_sync;
 
 use Drupal\Core\Form\FormStateInterface;
 
+/**
+ *
+ */
 class StructureSyncHelper {
-  public static function ExportTaxonomies() {
+
+  /**
+   *
+   */
+  public static function exportTaxonomies() {
     \Drupal::logger('structure_sync')
       ->notice('Taxonomies export started');
 
-    $vocabulary_list = array();
+    $vocabulary_list = [];
     $vocabularies = \Drupal::entityTypeManager()
       ->getStorage('taxonomy_vocabulary')->loadMultiple();
     foreach ($vocabularies as $vocabulary) {
@@ -64,9 +67,11 @@ class StructureSyncHelper {
       ->notice('Taxonomies exported');
   }
 
-  public static function ExportCustomBlocks() {
+  /**
+   *
+   */
+  public static function exportCustomBlocks() {
     // TODO: Doesn't work yet with custom blocks without content in body.
-
     \Drupal::logger('structure_sync')
       ->notice('Custom blocks export started');
 
@@ -115,14 +120,17 @@ class StructureSyncHelper {
       ->notice('Custom blocks exported');
   }
 
-  public static function ImportTaxonomies(array $form, FormStateInterface $form_state = NULL) {
+  /**
+   *
+   */
+  public static function importTaxonomies(array $form, FormStateInterface $form_state = NULL) {
     \Drupal::logger('structure_sync')
       ->notice('Taxonomy import started');
 
     if (is_object($form_state) && $form_state->hasValue('import_style_tax')) {
       $style = $form_state->getValue('import_style_tax');
     }
-    else if (array_key_exists('style', $form)) {
+    elseif (array_key_exists('style', $form)) {
       $style = $form['style'];
     }
     else {
@@ -148,6 +156,7 @@ class StructureSyncHelper {
 
         // TODO: Full style is same as safe but with deletes and updates.
         break;
+
       case 'safe':
         $queryCheck = $query->select('taxonomy_term_data', 'ttd');
         $queryCheck->fields('ttd', ['uuid']);
@@ -222,6 +231,7 @@ class StructureSyncHelper {
 
         drupal_set_message(t('Successfully imported taxonomies'));
         break;
+
       case 'force':
         $query->delete('taxonomy_term_field_data')->execute();
         $query->delete('taxonomy_term_hierarchy')->execute();
@@ -264,6 +274,7 @@ class StructureSyncHelper {
 
         drupal_set_message(t('Successfully imported taxonomies'));
         break;
+
       default:
         \Drupal::logger('structure_sync')
           ->error('Style not recognized');
@@ -271,14 +282,17 @@ class StructureSyncHelper {
     }
   }
 
-  public static function ImportCustomBlocks(array $form, FormStateInterface $form_state = NULL) {
+  /**
+   *
+   */
+  public static function importCustomBlocks(array $form, FormStateInterface $form_state = NULL) {
     \Drupal::logger('structure_sync')
       ->notice('Custom blocks import started');
 
     if (is_object($form_state) && $form_state->hasValue('import_style_bls')) {
       $style = $form_state->getValue('import_style_bls');
     }
-    else if (array_key_exists('style', $form)) {
+    elseif (array_key_exists('style', $form)) {
       $style = $form['style'];
     }
     else {
@@ -303,6 +317,7 @@ class StructureSyncHelper {
 
         // TODO: Full style is same as safe but with deletes and updates.
         break;
+
       case 'safe':
         $queryCheck = $query->select('block_content', 'bc');
         $queryCheck->fields('bc', ['uuid']);
@@ -394,6 +409,7 @@ class StructureSyncHelper {
 
         drupal_set_message(t('Successfully imported blocks'));
         break;
+
       case 'force':
         $query->delete('block_content_revision__body')->execute();
         $query->delete('block_content_revision')->execute();
@@ -488,10 +504,12 @@ class StructureSyncHelper {
 
         drupal_set_message(t('Successfully imported blocks'));
         break;
+
       default:
         \Drupal::logger('structure_sync')
           ->error('Style not recognized');
         break;
     }
   }
+
 }
