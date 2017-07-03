@@ -10,6 +10,7 @@ use Drupal\structure_sync\StructureSyncHelper;
  * Implements hook_drush_command().
  */
 function structure_sync_drush_command() {
+  // Add custom drush commands.
   $items = [];
   $items['export-taxonomies'] = [
     'description' => 'Export the taxonomies',

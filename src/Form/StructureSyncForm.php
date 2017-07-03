@@ -7,7 +7,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\structure_sync\StructureSyncHelper;
 
 /**
- * Import and export form for taxonomy terms.
+ * Import and export form for content in structure, like taxonomy terms.
  */
 class StructureSyncForm extends ConfigFormBase {
 

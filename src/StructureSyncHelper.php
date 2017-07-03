@@ -5,17 +5,18 @@ namespace Drupal\structure_sync;
 use Drupal\Core\Form\FormStateInterface;
 
 /**
- *
+ * Container of functions for importing and exporting content in structure.
  */
 class StructureSyncHelper {
 
   /**
-   *
+   * Function to export taxonomy terms.
    */
   public static function exportTaxonomies() {
     \Drupal::logger('structure_sync')
       ->notice('Taxonomies export started');
 
+    // Get a list of all vocabularies (their machine names).
     $vocabulary_list = [];
     $vocabularies = \Drupal::entityTypeManager()
       ->getStorage('taxonomy_vocabulary')->loadMultiple();
@@ -30,10 +31,13 @@ class StructureSyncHelper {
       return;
     }
 
+    // Clear the (previous) taxonomies data in the config, but don't save yet
+    // (just in case anything goes wrong).
     $config = \Drupal::service('config.factory')
       ->getEditable('structure_sync.data');
     $config->clear('taxonomies');
 
+    // Get all taxonomies from each (previously retrieved) vocabulary.
     foreach ($vocabulary_list as $vocabulary) {
       $query = \Drupal::database()
         ->select('taxonomy_term_field_data', 'ttfd');
@@ -54,6 +58,7 @@ class StructureSyncHelper {
       $query->condition('ttfd.vid', $vocabulary);
       $taxonomies = $query->execute()->fetchAll();
 
+      // Save the retrieved taxonomies to the config.
       $config
         ->set('taxonomies' . '.' . $vocabulary, json_decode(json_encode($taxonomies), TRUE))
         ->save();
@@ -68,17 +73,20 @@ class StructureSyncHelper {
   }
 
   /**
-   *
+   * Function to export custom blocks.
    */
   public static function exportCustomBlocks() {
     // TODO: Doesn't work yet with custom blocks without content in body.
     \Drupal::logger('structure_sync')
       ->notice('Custom blocks export started');
 
+    // Clear the (previous) custom blocks data in the config, but don't save yet
+    // (just in case anything goes wrong).
     $config = \Drupal::service('config.factory')
       ->getEditable('structure_sync.data');
     $config->clear('blocks');
 
+    // Get all custom blocks.
     $query = \Drupal::database()
       ->select('block_content_field_revision', 'bcfr');
     $query->fields('bcfr', [
@@ -108,6 +116,7 @@ class StructureSyncHelper {
 
     $blocks = json_decode(json_encode($blocks), TRUE);
 
+    // Save the retrieved custom blocks to the config.
     $config->set('blocks', $blocks)->save();
 
     foreach ($blocks as $block) {
@@ -121,12 +130,18 @@ class StructureSyncHelper {
   }
 
   /**
+   * Function to import taxonomy terms.
    *
+   * When this function is used without the designated form, you should assign
+   * an array with a key value pair for form with key 'style' and value 'full',
+   * 'safe' or 'force' to apply that import style.
    */
   public static function importTaxonomies(array $form, FormStateInterface $form_state = NULL) {
     \Drupal::logger('structure_sync')
       ->notice('Taxonomy import started');
 
+    // Check if the import style has been defined in the form (state) and else
+    // get it from the form array.
     if (is_object($form_state) && $form_state->hasValue('import_style_tax')) {
       $style = $form_state->getValue('import_style_tax');
     }
@@ -142,11 +157,13 @@ class StructureSyncHelper {
     \Drupal::logger('structure_sync')
       ->notice('Using "' . $style . '" style for taxonomy import');
 
+    // Get taxonomies from config.
     $taxonomies = \Drupal::config('structure_sync.data')
       ->get('taxonomies');
 
     $query = \Drupal::database();
 
+    // Import the taxonomies with the chosen style of importing.
     switch ($style) {
       case 'full':
         \Drupal::logger('structure_sync')
@@ -283,12 +300,18 @@ class StructureSyncHelper {
   }
 
   /**
+   * Function to import custom blocks.
    *
+   * When this function is used without the designated form, you should assign
+   * an array with a key value pair for form with key 'style' and value 'full',
+   * 'safe' or 'force' to apply that import style.
    */
   public static function importCustomBlocks(array $form, FormStateInterface $form_state = NULL) {
     \Drupal::logger('structure_sync')
       ->notice('Custom blocks import started');
 
+    // Check if the import style has been defined in the form (state) and else
+    // get it from the form array.
     if (is_object($form_state) && $form_state->hasValue('import_style_bls')) {
       $style = $form_state->getValue('import_style_bls');
     }
@@ -304,10 +327,12 @@ class StructureSyncHelper {
     \Drupal::logger('structure_sync')
       ->notice('Using "' . $style . '" style for custom blocks import');
 
+    // Get custom blocks from config.
     $blocks = \Drupal::config('structure_sync.data')->get('blocks');
 
     $query = \Drupal::database();
 
+    // Import the custom blocks with the chosen style of importing.
     switch ($style) {
       case 'full':
         \Drupal::logger('structure_sync')
