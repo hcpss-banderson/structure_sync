@@ -12,20 +12,27 @@ class StructureSyncHelper {
   /**
    * Function to export taxonomy terms.
    */
-  public static function exportTaxonomies() {
-    \Drupal::logger('structure_sync')
-      ->notice('Taxonomies export started');
+  public static function exportTaxonomies(array $form = NULL, FormStateInterface $form_state = NULL) {
+    StructureSyncHelper::logMessage('Taxonomies export started');
+
+    if (is_object($form_state) && $form_state->hasValue('export_voc_list')) {
+      $vocabulary_list = $form_state->getValue('export_voc_list');
+      $vocabulary_list = array_filter($vocabulary_list, 'is_string');
+    }
 
     // Get a list of all vocabularies (their machine names).
-    $vocabulary_list = [];
+    if (!isset($vocabulary_list)) {
+      $vocabulary_list = [];
+    }
     $vocabularies = \Drupal::entityTypeManager()
       ->getStorage('taxonomy_vocabulary')->loadMultiple();
     foreach ($vocabularies as $vocabulary) {
-      $vocabulary_list[] = $vocabulary->id();
+      if (in_array($vocabulary->id(), $vocabulary_list)) {
+        $vocabulary_list[] = $vocabulary->id();
+      }
     }
     if (!count($vocabulary_list)) {
-      \Drupal::logger('structure_sync')
-        ->warning('No vocabularies available');
+      StructureSyncHelper::logMessage('No vocabularies available', 'warning');
 
       drupal_set_message(t('No vocabularies available'), 'warning');
       return;
@@ -63,13 +70,11 @@ class StructureSyncHelper {
         ->set('taxonomies' . '.' . $vocabulary, json_decode(json_encode($taxonomies), TRUE))
         ->save();
 
-      \Drupal::logger('structure_sync')
-        ->notice('Exported ' . $vocabulary);
+      StructureSyncHelper::logMessage('Exported ' . $vocabulary);
     }
 
     drupal_set_message(t('The taxonomies have been successfully exported.'));
-    \Drupal::logger('structure_sync')
-      ->notice('Taxonomies exported');
+    StructureSyncHelper::logMessage('Taxonomies exported');
   }
 
   /**
@@ -77,8 +82,7 @@ class StructureSyncHelper {
    */
   public static function exportCustomBlocks() {
     // TODO: Doesn't work yet with custom blocks without content in body.
-    \Drupal::logger('structure_sync')
-      ->notice('Custom blocks export started');
+    StructureSyncHelper::logMessage('Custom blocks export started');
 
     // Clear the (previous) custom blocks data in the config, but don't save yet
     // (just in case anything goes wrong).
@@ -114,19 +118,18 @@ class StructureSyncHelper {
     $query->join('block_content_revision__body', 'bcrb', 'bcfr.id = bcrb.entity_id AND bcfr.revision_id = bcrb.revision_id');
     $blocks = $query->execute()->fetchAll();
 
-    $blocks = json_decode(json_encode($blocks), TRUE);
+    $blocks = json_encode($blocks);
+    $blocks = json_decode($blocks, TRUE);
 
     // Save the retrieved custom blocks to the config.
     $config->set('blocks', $blocks)->save();
 
     foreach ($blocks as $block) {
-      \Drupal::logger('structure_sync')
-        ->notice('Exported "' . $block['info'] . '" revision (' . $block['revision_id'] . ')');
+      StructureSyncHelper::logMessage('Exported "' . $block['info'] . '" revision (' . $block['revision_id'] . ')');
     }
 
     drupal_set_message(t('The custom blocks have been successfully exported.'));
-    \Drupal::logger('structure_sync')
-      ->notice('Custom blocks exported');
+    StructureSyncHelper::logMessage('Custom blocks exported');
   }
 
   /**
@@ -137,25 +140,23 @@ class StructureSyncHelper {
    * 'safe' or 'force' to apply that import style.
    */
   public static function importTaxonomies(array $form, FormStateInterface $form_state = NULL) {
-    \Drupal::logger('structure_sync')
-      ->notice('Taxonomy import started');
+    StructureSyncHelper::logMessage('Taxonomy import started');
 
     // Check if the import style has been defined in the form (state) and else
     // get it from the form array.
     if (is_object($form_state) && $form_state->hasValue('import_style_tax')) {
       $style = $form_state->getValue('import_style_tax');
+      $vocabularies = $form_state->getValue('import_voc_list');
     }
     elseif (array_key_exists('style', $form)) {
       $style = $form['style'];
     }
     else {
-      \Drupal::logger('structure_sync')
-        ->error('No style defined on taxonomy import');
+      StructureSyncHelper::logMessage('No style defined on taxonomy import', 'error');
       return;
     }
 
-    \Drupal::logger('structure_sync')
-      ->notice('Using "' . $style . '" style for taxonomy import');
+    StructureSyncHelper::logMessage('Using "' . $style . '" style for taxonomy import');
 
     // Get taxonomies from config.
     $taxonomies = \Drupal::config('structure_sync.data')
@@ -166,8 +167,7 @@ class StructureSyncHelper {
     // Import the taxonomies with the chosen style of importing.
     switch ($style) {
       case 'full':
-        \Drupal::logger('structure_sync')
-          ->warning('"Full" style not yet implemented');
+        StructureSyncHelper::logMessage('"Full" style not yet implemented', 'warning');
 
         drupal_set_message(t('"Full" style not yet implemented'), 'warning');
 
@@ -237,14 +237,12 @@ class StructureSyncHelper {
                 'default_langcode' => $taxonomy['default_langcode'],
               ])->execute();
 
-              \Drupal::logger('structure_sync')
-                ->notice('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+              StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
             }
           }
         }
 
-        \Drupal::logger('structure_sync')
-          ->notice('Successfully imported taxonomies');
+        StructureSyncHelper::logMessage('Successfully imported taxonomies');
 
         drupal_set_message(t('Successfully imported taxonomies'));
         break;
@@ -254,8 +252,7 @@ class StructureSyncHelper {
         $query->delete('taxonomy_term_hierarchy')->execute();
         $query->delete('taxonomy_term_data')->execute();
 
-        \Drupal::logger('structure_sync')
-          ->notice('Deleted all taxonomies');
+        StructureSyncHelper::logMessage('Deleted all taxonomies');
 
         foreach ($taxonomies as $vid => $vocabulary) {
           foreach ($vocabulary as $taxonomy) {
@@ -281,20 +278,17 @@ class StructureSyncHelper {
               'default_langcode' => $taxonomy['default_langcode'],
             ])->execute();
 
-            \Drupal::logger('structure_sync')
-              ->notice('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+            StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
           }
         }
 
-        \Drupal::logger('structure_sync')
-          ->notice('Successfully imported taxonomies');
+        StructureSyncHelper::logMessage('Successfully imported taxonomies');
 
         drupal_set_message(t('Successfully imported taxonomies'));
         break;
 
       default:
-        \Drupal::logger('structure_sync')
-          ->error('Style not recognized');
+        StructureSyncHelper::logMessage('Style not recognized', 'error');
         break;
     }
   }
@@ -307,8 +301,7 @@ class StructureSyncHelper {
    * 'safe' or 'force' to apply that import style.
    */
   public static function importCustomBlocks(array $form, FormStateInterface $form_state = NULL) {
-    \Drupal::logger('structure_sync')
-      ->notice('Custom blocks import started');
+    StructureSyncHelper::logMessage('Custom blocks import started');
 
     // Check if the import style has been defined in the form (state) and else
     // get it from the form array.
@@ -319,13 +312,11 @@ class StructureSyncHelper {
       $style = $form['style'];
     }
     else {
-      \Drupal::logger('structure_sync')
-        ->error('No style defined on custom blocks import');
+      StructureSyncHelper::logMessage('No style defined on custom blocks import', 'error');
       return;
     }
 
-    \Drupal::logger('structure_sync')
-      ->notice('Using "' . $style . '" style for custom blocks import');
+    StructureSyncHelper::logMessage('Using "' . $style . '" style for custom blocks import');
 
     // Get custom blocks from config.
     $blocks = \Drupal::config('structure_sync.data')->get('blocks');
@@ -335,8 +326,7 @@ class StructureSyncHelper {
     // Import the custom blocks with the chosen style of importing.
     switch ($style) {
       case 'full':
-        \Drupal::logger('structure_sync')
-          ->warning('"Full" style not yet implemented');
+        StructureSyncHelper::logMessage('"Full" style not yet implemented', 'warning');
 
         drupal_set_message(t('"Full" style not yet implemented'), 'warning');
 
@@ -383,8 +373,7 @@ class StructureSyncHelper {
                 'default_langcode' => $block_revision['default_langcode'],
               ])->execute();
 
-              \Drupal::logger('structure_sync')
-                ->notice('Imported current revision of "' . $block_revision['info'] . '"');
+              StructureSyncHelper::logMessage('Imported current revision of "' . $block_revision['info'] . '"');
             }
 
             $query->insert('block_content_revision')->fields([
@@ -416,21 +405,17 @@ class StructureSyncHelper {
               'default_langcode' => $block_revision['default_langcode'],
             ])->execute();
 
-            \Drupal::logger('structure_sync')
-              ->notice('Imported "' . $block_revision['info'] . '" revision ' . $block_revision['revision_id']);
+            StructureSyncHelper::logMessage('Imported "' . $block_revision['info'] . '" revision ' . $block_revision['revision_id']);
           }
         }
 
-        \Drupal::logger('structure_sync')
-          ->notice('Flushing all caches');
+        StructureSyncHelper::logMessage('Flushing all caches');
 
         drupal_flush_all_caches();
 
-        \Drupal::logger('structure_sync')
-          ->notice('Succesfully flushed caches');
+        StructureSyncHelper::logMessage('Succesfully flushed caches');
 
-        \Drupal::logger('structure_sync')
-          ->notice('Successfully imported blocks');
+        StructureSyncHelper::logMessage('Successfully imported blocks');
 
         drupal_set_message(t('Successfully imported blocks'));
         break;
@@ -443,8 +428,7 @@ class StructureSyncHelper {
         $query->delete('block_content__body')->execute();
         $query->delete('block_content')->execute();
 
-        \Drupal::logger('structure_sync')
-          ->notice('Deleted all blocks');
+        StructureSyncHelper::logMessage('Deleted all blocks');
 
         foreach ($blocks as $block_revision) {
           if ($block_revision['revision_id'] == $block_revision['rev_id_current']) {
@@ -479,8 +463,7 @@ class StructureSyncHelper {
               'default_langcode' => $block_revision['default_langcode'],
             ])->execute();
 
-            \Drupal::logger('structure_sync')
-              ->notice('Imported current revision of "' . $block_revision['info'] . '"');
+            StructureSyncHelper::logMessage('Imported current revision of "' . $block_revision['info'] . '"');
           }
 
           $query->insert('block_content_revision')->fields([
@@ -512,27 +495,42 @@ class StructureSyncHelper {
             'default_langcode' => $block_revision['default_langcode'],
           ])->execute();
 
-          \Drupal::logger('structure_sync')
-            ->notice('Imported "' . $block_revision['info'] . '" revision ' . $block_revision['revision_id']);
+          StructureSyncHelper::logMessage('Imported "' . $block_revision['info'] . '" revision ' . $block_revision['revision_id']);
         }
 
-        \Drupal::logger('structure_sync')
-          ->notice('Flushing all caches');
+        StructureSyncHelper::logMessage('Flushing all caches');
 
         drupal_flush_all_caches();
 
-        \Drupal::logger('structure_sync')
-          ->notice('Succesfully flushed caches');
+        StructureSyncHelper::logMessage('Succesfully flushed caches');
 
-        \Drupal::logger('structure_sync')
-          ->notice('Successfully imported blocks');
+        StructureSyncHelper::logMessage('Successfully imported blocks');
 
         drupal_set_message(t('Successfully imported blocks'));
         break;
 
       default:
-        \Drupal::logger('structure_sync')
-          ->error('Style not recognized');
+        StructureSyncHelper::logMessage('Style not recognized', 'error');
+        break;
+    }
+  }
+
+  static function logMessage($message, $type = NULL) {
+    $log = \Drupal::config('structure_sync.data')->get('log');
+
+    if (isset($log) && ($log === FALSE)) {
+      return;
+    }
+
+    switch ($type) {
+      case 'error':
+        \Drupal::logger('structure_sync')->error($message);
+        break;
+      case 'warning':
+        \Drupal::logger('structure_sync')->warning($message);
+        break;
+      default:
+        \Drupal::logger('structure_sync')->notice($message);
         break;
     }
   }

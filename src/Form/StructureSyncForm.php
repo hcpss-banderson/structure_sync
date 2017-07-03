@@ -33,10 +33,13 @@ class StructureSyncForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $helper = new StructureSyncHelper();
 
+    // TODO: Logger checkbox.
+
     $form['taxonomies'] = [
-      '#type' => 'fieldset',
+      '#type' => 'details',
       '#title' => $this->t('Taxonomies'),
       '#weight' => 1,
+      '#open' => TRUE,
     ];
 
     $form['taxonomies']['export'] = [
@@ -99,7 +102,34 @@ class StructureSyncForm extends ConfigFormBase {
       '#submit' => [[$helper, 'importCustomBlocks']],
     ];
 
+    $log = \Drupal::config('structure_sync.data')->get('log');
+
+    if ($log === NULL) {
+      $log = TRUE;
+    }
+
+    $form['log'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable logging'),
+      '#default_value' => $log,
+    ];
+
+    $form['submit'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Save'),
+    ];
+
     return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    \Drupal::service('config.factory')
+      ->getEditable('structure_sync.data')
+      ->set('log', $form_state->getValue('log'))
+      ->save();
   }
 
 }

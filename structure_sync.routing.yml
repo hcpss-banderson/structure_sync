@@ -5,3 +5,19 @@ structure_sync:
     _title: 'Structure Sync'
   requirements:
     _permission: 'administer site configuration'
+
+structure_sync.general.form:
+  path: '/admin/structure/structure-sync/general'
+  defaults:
+    _form: '\Drupal\structure_sync\Form\StructureSyncForm'
+    _title: 'General settings'
+  requirements:
+    _permission: 'administer site configuration'
+
+structure_sync.taxonomies.form:
+  path: '/admin/structure/structure-sync/taxonomies'
+  defaults:
+    _form: '\Drupal\structure_sync\Form\TaxonomiesSyncForm'
+    _title: 'Taxonomies'
+  requirements:
+    _permission: 'administer site configuration'
