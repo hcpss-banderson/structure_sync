@@ -188,11 +188,93 @@ class StructureSyncHelper {
     // Import the taxonomies with the chosen style of importing.
     switch ($style) {
       case 'full':
-        StructureSyncHelper::logMessage('"Full" style not yet implemented', 'warning');
+        // TODO: Check taxonomy_index.
 
-        drupal_set_message(t('"Full" style not yet implemented'), 'warning');
+        $queryCheck = $query->select('taxonomy_term_data', 'ttd');
+        $queryCheck->fields('ttd', ['uuid']);
+        $uuids = $queryCheck->execute()->fetchAll();
+        $uuids = array_column($uuids, 'uuid');
 
-        // TODO: Full style is same as safe but with deletes and updates.
+        $taxonomiesTids = [];
+        foreach ($taxonomies as $vocabulary) {
+          foreach ($vocabulary as $taxonomy) {
+            $taxonomiesTids[] = $taxonomy['tid'];
+          }
+        }
+
+        $query->delete('taxonomy_term_field_data')
+          ->condition('tid', $taxonomiesTids, 'NOT IN')->execute();
+        $query->delete('taxonomy_term_hierarchy')
+          ->condition('tid', $taxonomiesTids, 'NOT IN')->execute();
+        $query->delete('taxonomy_term_data')
+          ->condition('tid', $taxonomiesTids, 'NOT IN')->execute();
+
+        foreach ($taxonomies as $vid => $vocabulary) {
+          foreach ($vocabulary as $taxonomy) {
+            $tid = $taxonomy['tid'];
+
+            if (!in_array($taxonomy['uuid'], $uuids)) {
+              $query->insert('taxonomy_term_data')->fields([
+                'tid' => $tid,
+                'vid' => $vid,
+                'uuid' => $taxonomy['uuid'],
+                'langcode' => $taxonomy['langcode'],
+              ])->execute();
+              $query->insert('taxonomy_term_hierarchy')->fields([
+                'tid' => $tid,
+                'parent' => $taxonomy['parent'],
+              ])->execute();
+              $query->insert('taxonomy_term_field_data')->fields([
+                'tid' => $tid,
+                'vid' => $vid,
+                'langcode' => $taxonomy['langcode'],
+                'name' => $taxonomy['name'],
+                'description__value' => $taxonomy['description__value'],
+                'description__format' => $taxonomy['description__format'],
+                'weight' => $taxonomy['weight'],
+                'changed' => $taxonomy['changed'],
+                'default_langcode' => $taxonomy['default_langcode'],
+              ])->execute();
+
+              StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+            }
+            else {
+              $query->update('taxonomy_term_data')->fields([
+                'tid' => $tid,
+                'vid' => $vid,
+                'uuid' => $taxonomy['uuid'],
+                'langcode' => $taxonomy['langcode'],
+              ])->condition('tid', $tid, '=')->execute();
+              $query->update('taxonomy_term_hierarchy')->fields([
+                'tid' => $tid,
+                'parent' => $taxonomy['parent'],
+              ])->condition('tid', $tid, '=')->execute();
+              $query->update('taxonomy_term_field_data')->fields([
+                'tid' => $tid,
+                'vid' => $vid,
+                'langcode' => $taxonomy['langcode'],
+                'name' => $taxonomy['name'],
+                'description__value' => $taxonomy['description__value'],
+                'description__format' => $taxonomy['description__format'],
+                'weight' => $taxonomy['weight'],
+                'changed' => $taxonomy['changed'],
+                'default_langcode' => $taxonomy['default_langcode'],
+              ])->condition('tid', $tid, '=')->execute();
+
+              StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+            }
+          }
+        }
+
+        StructureSyncHelper::logMessage('Flushing all caches');
+
+        drupal_flush_all_caches();
+
+        StructureSyncHelper::logMessage('Succesfully flushed caches');
+
+        StructureSyncHelper::logMessage('Successfully imported taxonomies');
+
+        drupal_set_message(t('Successfully imported taxonomies'));
         break;
 
       case 'safe':
@@ -269,6 +351,8 @@ class StructureSyncHelper {
         break;
 
       case 'force':
+        // TODO: Check taxonomy_index.
+
         $query->delete('taxonomy_term_field_data')->execute();
         $query->delete('taxonomy_term_hierarchy')->execute();
         $query->delete('taxonomy_term_data')->execute();
@@ -361,11 +445,187 @@ class StructureSyncHelper {
     // Import the custom blocks with the chosen style of importing.
     switch ($style) {
       case 'full':
-        StructureSyncHelper::logMessage('"Full" style not yet implemented', 'warning');
+        $queryCheck = $query->select('block_content', 'bc');
+        $queryCheck->fields('bc', ['uuid']);
+        $uuids = $queryCheck->execute()->fetchAll();
+        $uuids = array_column($uuids, 'uuid');
 
-        drupal_set_message(t('"Full" style not yet implemented'), 'warning');
+        $blockRevisionIds = [];
+        foreach ($blocks as $block) {
+          $blockRevisionIds[] = $block['revision_id'];
+        }
 
-        // TODO: Full style is same as safe but with deletes and updates.
+        $query->delete('block_content_revision__body')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+        $query->delete('block_content_revision')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+        $query->delete('block_content_field_revision')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+        $query->delete('block_content_field_data')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+        $query->delete('block_content__body')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+        $query->delete('block_content')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+
+        foreach ($blocks as $block_revision) {
+          if (!in_array($block_revision['uuid'], $uuids)) {
+            if ($block_revision['revision_id'] == $block_revision['rev_id_current']) {
+              $query->insert('block_content')->fields([
+                'id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'type' => $block_revision['bundle'],
+                'uuid' => $block_revision['uuid'],
+                'langcode' => $block_revision['langcode'],
+              ])->execute();
+              $query->insert('block_content__body')->fields([
+                'bundle' => $block_revision['bundle'],
+                'deleted' => $block_revision['deleted'],
+                'entity_id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'langcode' => $block_revision['langcode'],
+                'delta' => $block_revision['delta'],
+                'body_value' => $block_revision['body_value'],
+                'body_summary' => $block_revision['body_summary'],
+                'body_format' => $block_revision['body_format'],
+              ])->execute();
+              $query->insert('block_content_field_data')->fields([
+                'id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'type' => $block_revision['bundle'],
+                'langcode' => $block_revision['langcode'],
+                'info' => $block_revision['info'],
+                'changed' => $block_revision['changed'],
+                'revision_created' => $block_revision['revision_created'],
+                'revision_user' => $block_revision['revision_user'],
+                'revision_translation_affected' => $block_revision['revision_translation_affected'],
+                'default_langcode' => $block_revision['default_langcode'],
+              ])->execute();
+
+              StructureSyncHelper::logMessage('Imported current revision of "' . $block_revision['info'] . '"');
+            }
+
+            $query->insert('block_content_revision')->fields([
+              'id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'revision_log' => $block_revision['revision_log'],
+            ])->execute();
+            $query->insert('block_content_revision__body')->fields([
+              'bundle' => $block_revision['bundle'],
+              'deleted' => $block_revision['deleted'],
+              'entity_id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'delta' => $block_revision['delta'],
+              'body_value' => $block_revision['body_value'],
+              'body_summary' => $block_revision['body_summary'],
+              'body_format' => $block_revision['body_format'],
+            ])->execute();
+            $query->insert('block_content_field_revision')->fields([
+              'id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'info' => $block_revision['info'],
+              'changed' => $block_revision['changed'],
+              'revision_created' => $block_revision['revision_created'],
+              'revision_user' => $block_revision['revision_user'],
+              'revision_translation_affected' => $block_revision['revision_translation_affected'],
+              'default_langcode' => $block_revision['default_langcode'],
+            ])->execute();
+
+            StructureSyncHelper::logMessage('Imported "' . $block_revision['info'] . '" revision ' . $block_revision['revision_id']);
+          }
+          else {
+            if ($block_revision['revision_id'] == $block_revision['rev_id_current']) {
+              $query->update('block_content')->fields([
+                'id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'type' => $block_revision['bundle'],
+                'uuid' => $block_revision['uuid'],
+                'langcode' => $block_revision['langcode'],
+              ])->condition('revision_id', $block_revision['revision_id'], '=')
+                ->execute();
+              $query->update('block_content__body')->fields([
+                'bundle' => $block_revision['bundle'],
+                'deleted' => $block_revision['deleted'],
+                'entity_id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'langcode' => $block_revision['langcode'],
+                'delta' => $block_revision['delta'],
+                'body_value' => $block_revision['body_value'],
+                'body_summary' => $block_revision['body_summary'],
+                'body_format' => $block_revision['body_format'],
+              ])->condition('revision_id', $block_revision['revision_id'], '=')
+                ->execute();
+              $query->update('block_content_field_data')->fields([
+                'id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'type' => $block_revision['bundle'],
+                'langcode' => $block_revision['langcode'],
+                'info' => $block_revision['info'],
+                'changed' => $block_revision['changed'],
+                'revision_created' => $block_revision['revision_created'],
+                'revision_user' => $block_revision['revision_user'],
+                'revision_translation_affected' => $block_revision['revision_translation_affected'],
+                'default_langcode' => $block_revision['default_langcode'],
+              ])->condition('revision_id', $block_revision['revision_id'], '=')
+                ->execute();
+
+              StructureSyncHelper::logMessage('Imported current revision of "' . $block_revision['info'] . '"');
+            }
+
+            $query->update('block_content_revision')->fields([
+              'id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'revision_log' => $block_revision['revision_log'],
+            ])->condition('revision_id', $block_revision['revision_id'], '=')
+              ->execute();
+            $query->update('block_content_revision__body')->fields([
+              'bundle' => $block_revision['bundle'],
+              'deleted' => $block_revision['deleted'],
+              'entity_id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'delta' => $block_revision['delta'],
+              'body_value' => $block_revision['body_value'],
+              'body_summary' => $block_revision['body_summary'],
+              'body_format' => $block_revision['body_format'],
+            ])->condition('revision_id', $block_revision['revision_id'], '=')
+              ->execute();
+            $query->update('block_content_field_revision')->fields([
+              'id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'info' => $block_revision['info'],
+              'changed' => $block_revision['changed'],
+              'revision_created' => $block_revision['revision_created'],
+              'revision_user' => $block_revision['revision_user'],
+              'revision_translation_affected' => $block_revision['revision_translation_affected'],
+              'default_langcode' => $block_revision['default_langcode'],
+            ])->condition('revision_id', $block_revision['revision_id'], '=')
+              ->execute();
+
+            StructureSyncHelper::logMessage('Imported "' . $block_revision['info'] . '" revision ' . $block_revision['revision_id']);
+          }
+        }
+
+        StructureSyncHelper::logMessage('Flushing all caches');
+
+        drupal_flush_all_caches();
+
+        StructureSyncHelper::logMessage('Succesfully flushed caches');
+
+        StructureSyncHelper::logMessage('Successfully imported blocks');
+
+        drupal_set_message(t('Successfully imported blocks'));
         break;
 
       case 'safe':

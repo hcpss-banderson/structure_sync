@@ -42,7 +42,11 @@ class StructureSyncForm extends ConfigFormBase {
       $log = TRUE;
     }
 
-    $form['log'] = [
+    $form['options'] = [
+      '#type' => 'fieldset',
+    ];
+
+    $form['options']['log'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Enable logging'),
       '#default_value' => $log,
@@ -50,6 +54,7 @@ class StructureSyncForm extends ConfigFormBase {
 
     $form['submit'] = [
       '#type' => 'submit',
+      '#button_type' => 'primary',
       '#value' => $this->t('Save'),
     ];
 
