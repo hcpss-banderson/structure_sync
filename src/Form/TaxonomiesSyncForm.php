@@ -33,6 +33,11 @@ class TaxonomiesSyncForm extends ConfigFormBase {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $helper = new StructureSyncHelper();
 
+    $form['title'] = [
+      '#type' => 'page_title',
+      '#title' => $this->t('Taxonomies'),
+    ];
+
     $form['export'] = [
       '#type' => 'details',
       '#title' => $this->t('Export'),
@@ -59,6 +64,7 @@ class TaxonomiesSyncForm extends ConfigFormBase {
     $form['export']['export_voc_list'] = [
       '#type' => 'checkboxes',
       '#options' => $vocabulary_list,
+      '#default_value' => $vocabulary_list,
       '#title' => $this->t('Select the vocabularies you would like to export'),
     ];
 
@@ -69,23 +75,38 @@ class TaxonomiesSyncForm extends ConfigFormBase {
       '#open' => TRUE,
     ];
 
-    $form['import']['import_style_tax'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Select import style'),
-      '#options' => [
-        'full' => $this->t('Full (not yet implemented)'),
-        'safe' => $this->t('Safe'),
-        'force' => $this->t('Force'),
-      ],
-      '#default_value' => 'safe',
+    $form['import']['import_taxonomies_safe'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Import taxonomies (safely)'),
+      '#name' => 'importTaxonomiesSafe',
+      '#button_type' => 'primary',
+      '#submit' => [[$helper, 'importTaxonomiesSafe']],
     ];
 
-    $form['import']['import_taxonomies'] = [
+    $form['import']['import_taxonomies_full'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Import taxonomies'),
-      '#name' => 'importTaxonomies',
-      '#button_type' => 'primary',
-      '#submit' => [[$helper, 'importTaxonomies']],
+      '#value' => $this->t('Import taxonomies (full)'),
+      '#name' => 'importTaxonomiesFull',
+      '#submit' => [[$helper, 'importTaxonomiesFull']],
+    ];
+
+    $form['import']['import_taxonomies_force'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Import taxonomies (force)'),
+      '#name' => 'importTaxonomiesForce',
+      '#submit' => [[$helper, 'importTaxonomiesForce']],
+    ];
+
+    $voc_list = array_keys(\Drupal::config('structure_sync.data')
+      ->get('taxonomies'));
+
+    $vocabulary_list_config = array_combine($voc_list, $voc_list);
+
+    $form['import']['import_voc_list'] = [
+      '#type' => 'checkboxes',
+      '#options' => $vocabulary_list_config,
+      '#default_value' => $vocabulary_list_config,
+      '#title' => $this->t('Select the vocabularies you would like to import'),
     ];
 
     return $form;

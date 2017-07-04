@@ -23,18 +23,18 @@ class StructureSyncHelper {
     // Get a list of all vocabularies (their machine names).
     if (!isset($vocabulary_list)) {
       $vocabulary_list = [];
-    }
-    $vocabularies = \Drupal::entityTypeManager()
-      ->getStorage('taxonomy_vocabulary')->loadMultiple();
-    foreach ($vocabularies as $vocabulary) {
-      if (in_array($vocabulary->id(), $vocabulary_list)) {
-        $vocabulary_list[] = $vocabulary->id();
+      $vocabularies = \Drupal::entityTypeManager()
+        ->getStorage('taxonomy_vocabulary')->loadMultiple();
+      foreach ($vocabularies as $vocabulary) {
+        if (in_array($vocabulary->id(), $vocabulary_list)) {
+          $vocabulary_list[] = $vocabulary->id();
+        }
       }
     }
     if (!count($vocabulary_list)) {
       StructureSyncHelper::logMessage('No vocabularies available', 'warning');
 
-      drupal_set_message(t('No vocabularies available'), 'warning');
+      drupal_set_message(t('No vocabularies selected/available'), 'warning');
       return;
     }
 
@@ -80,9 +80,14 @@ class StructureSyncHelper {
   /**
    * Function to export custom blocks.
    */
-  public static function exportCustomBlocks() {
+  public static function exportCustomBlocks(array $form = NULL, FormStateInterface $form_state = NULL) {
     // TODO: Doesn't work yet with custom blocks without content in body.
     StructureSyncHelper::logMessage('Custom blocks export started');
+
+    if (is_object($form_state) && $form_state->hasValue('export_block_list')) {
+      $block_list = $form_state->getValue('export_block_list');
+      $block_list = array_filter($block_list, 'is_string');
+    }
 
     // Clear the (previous) custom blocks data in the config, but don't save yet
     // (just in case anything goes wrong).
@@ -116,6 +121,9 @@ class StructureSyncHelper {
     $query->addField('bcrb', 'body_summary');
     $query->addField('bcrb', 'body_format');
     $query->join('block_content_revision__body', 'bcrb', 'bcfr.id = bcrb.entity_id AND bcfr.revision_id = bcrb.revision_id');
+    if (isset($block_list)) {
+      $query->condition('bc.uuid', array_keys($block_list), 'IN');
+    }
     $blocks = $query->execute()->fetchAll();
 
     $blocks = json_encode($blocks);
@@ -144,11 +152,11 @@ class StructureSyncHelper {
 
     // Check if the import style has been defined in the form (state) and else
     // get it from the form array.
-    if (is_object($form_state) && $form_state->hasValue('import_style_tax')) {
-      $style = $form_state->getValue('import_style_tax');
-      $vocabularies = $form_state->getValue('import_voc_list');
+    if (is_object($form_state) && $form_state->hasValue('import_voc_list')) {
+      $taxonomiesSelected = $form_state->getValue('import_voc_list');
+      $taxonomiesSelected = array_filter($taxonomiesSelected, 'is_string');
     }
-    elseif (array_key_exists('style', $form)) {
+    if (array_key_exists('style', $form)) {
       $style = $form['style'];
     }
     else {
@@ -159,8 +167,21 @@ class StructureSyncHelper {
     StructureSyncHelper::logMessage('Using "' . $style . '" style for taxonomy import');
 
     // Get taxonomies from config.
-    $taxonomies = \Drupal::config('structure_sync.data')
+    $taxonomiesConfig = \Drupal::config('structure_sync.data')
       ->get('taxonomies');
+
+    $taxonomies = [];
+
+    if (isset($taxonomiesSelected)) {
+      foreach ($taxonomiesConfig as $taxKey => $taxValue) {
+        if (in_array($taxKey, $taxonomiesSelected)) {
+          $taxonomies[$taxKey] = $taxValue;
+        }
+      }
+    }
+    else {
+      $taxonomies = $taxonomiesConfig;
+    }
 
     $query = \Drupal::database();
 
@@ -305,10 +326,11 @@ class StructureSyncHelper {
 
     // Check if the import style has been defined in the form (state) and else
     // get it from the form array.
-    if (is_object($form_state) && $form_state->hasValue('import_style_bls')) {
-      $style = $form_state->getValue('import_style_bls');
+    if (is_object($form_state) && $form_state->hasValue('import_block_list')) {
+      $blocksSelected = $form_state->getValue('import_block_list');
+      $blocksSelected = array_filter($blocksSelected, 'is_string');
     }
-    elseif (array_key_exists('style', $form)) {
+    if (array_key_exists('style', $form)) {
       $style = $form['style'];
     }
     else {
@@ -319,7 +341,20 @@ class StructureSyncHelper {
     StructureSyncHelper::logMessage('Using "' . $style . '" style for custom blocks import');
 
     // Get custom blocks from config.
-    $blocks = \Drupal::config('structure_sync.data')->get('blocks');
+    $blocksConfig = \Drupal::config('structure_sync.data')->get('blocks');
+
+    $blocks = [];
+
+    if (isset($blocksSelected)) {
+      foreach ($blocksConfig as $block) {
+        if (in_array($block['uuid'], array_keys($blocksSelected))) {
+          $blocks[] = $block;
+        }
+      }
+    }
+    else {
+      $blocks = $blocksConfig;
+    }
 
     $query = \Drupal::database();
 
@@ -533,6 +568,42 @@ class StructureSyncHelper {
         \Drupal::logger('structure_sync')->notice($message);
         break;
     }
+  }
+
+  public static function importTaxonomiesFull(array &$form, FormStateInterface $form_state = NULL) {
+    $form['style'] = 'full';
+
+    StructureSyncHelper::importTaxonomies($form, $form_state);
+  }
+
+  public static function importTaxonomiesSafe(array &$form, FormStateInterface $form_state = NULL) {
+    $form['style'] = 'safe';
+
+    StructureSyncHelper::importTaxonomies($form, $form_state);
+  }
+
+  public static function importTaxonomiesForce(array &$form, FormStateInterface $form_state = NULL) {
+    $form['style'] = 'force';
+
+    StructureSyncHelper::importTaxonomies($form, $form_state);
+  }
+
+  public static function importCustomBlocksFull(array &$form, FormStateInterface $form_state = NULL) {
+    $form['style'] = 'full';
+
+    StructureSyncHelper::importCustomBlocks($form, $form_state);
+  }
+
+  public static function importCustomBlocksSafe(array &$form, FormStateInterface $form_state = NULL) {
+    $form['style'] = 'safe';
+
+    StructureSyncHelper::importCustomBlocks($form, $form_state);
+  }
+
+  public static function importCustomBlocksForce(array &$form, FormStateInterface $form_state = NULL) {
+    $form['style'] = 'force';
+
+    StructureSyncHelper::importCustomBlocks($form, $form_state);
   }
 
 }

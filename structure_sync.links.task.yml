@@ -9,3 +9,9 @@ structure_sync.taxonomies:
   title: Taxonomies
   base_route: structure_sync
   weight: 2
+
+structure_sync.blocks:
+  route_name: structure_sync.blocks.form
+  title: Custom blocks
+  base_route: structure_sync
+  weight: 3
