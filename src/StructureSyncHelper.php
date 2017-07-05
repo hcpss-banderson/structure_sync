@@ -141,6 +141,87 @@ class StructureSyncHelper {
   }
 
   /**
+   * Function to export menu links.
+   */
+  public static function exportMenuLinks(array $form = NULL, FormStateInterface $form_state = NULL) {
+    StructureSyncHelper::logMessage('Menu links export started');
+
+    if (is_object($form_state) && $form_state->hasValue('export_menu_list')) {
+      $menu_list = $form_state->getValue('export_menu_list');
+      $menu_list = array_filter($menu_list, 'is_string');
+    }
+
+    $config = \Drupal::service('config.factory')
+      ->getEditable('structure_sync.data');
+    $config->clear('menus');
+
+    $query = \Drupal::database()->select('menu_tree', 'mt')
+      ->fields('mt', [
+        'menu_name',
+        'mlid',
+        'id',
+        'parent',
+        'route_name',
+        'route_param_key',
+        'route_parameters',
+        'url',
+        'title',
+        'description',
+        'class',
+        'options',
+        'provider',
+        'enabled',
+        'discovered',
+        'expanded',
+        'weight',
+        'metadata',
+        'has_children',
+        'depth',
+        'p1',
+        'p2',
+        'p3',
+        'p4',
+        'p5',
+        'p6',
+        'p7',
+        'p8',
+        'p9',
+        'form_class',
+      ]);
+    $query->addField('mlc', 'id');
+    $query->addField('mlc', 'bundle');
+    $query->addField('mlc', 'uuid');
+    $query->addField('mlc', 'langcode');
+    $query->join('menu_link_content', 'mlc', "mlc.uuid = TRIM('menu_link_content:' FROM mt.id)");
+    $query->addField('mlcd', 'title');
+    $query->addField('mlcd', 'description');
+    $query->addField('mlcd', 'menu_name');
+    $query->addField('mlcd', 'link__uri');
+    $query->addField('mlcd', 'link__options');
+    $query->addField('mlcd', 'external');
+    $query->addField('mlcd', 'rediscover');
+    $query->addField('mlcd', 'weight');
+    $query->addField('mlcd', 'expanded');
+    $query->addField('mlcd', 'enabled');
+    $query->addField('mlcd', 'parent');
+    $query->addField('mlcd', 'changed');
+    $query->addField('mlcd', 'default_langcode');
+    $query->join('menu_link_content_data', 'mlcd', 'mlcd.id = mlc.id');
+    if (isset($menu_list)) {
+      $query->condition('mlcd.menu_name', $menu_list, 'IN');
+    }
+
+    $menus = $query->execute()->fetchAll();
+
+    $config
+      ->set('menus', json_decode(json_encode($menus), TRUE))
+      ->save();
+
+    drupal_set_message(t('The menu links have been successfully exported.'));
+    StructureSyncHelper::logMessage('Menu links exported');
+  }
+
+  /**
    * Function to import taxonomy terms.
    *
    * When this function is used without the designated form, you should assign

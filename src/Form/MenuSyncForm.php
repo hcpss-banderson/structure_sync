@@ -45,11 +45,54 @@ class MenuSyncForm extends ConfigFormBase {
       '#open' => TRUE,
     ];
 
+    $form['export']['export_menu_links'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Export menu links'),
+      '#name' => 'exportMenuLinks',
+      '#button_type' => 'primary',
+      '#submit' => [[$helper, 'exportMenuLinks']],
+    ];
+
+    // Get a list of all menus (and their machine names).
+    $menu_list = [];
+    $query = \Drupal::database()
+      ->select('menu_tree', 'mt')
+      ->fields('mt', ['menu_name']);
+    $query->condition('provider', 'menu_link_content', '=');
+    $menus = $query->execute()->fetchAll();
+    foreach ($menus as $menu) {
+      $menuName = \Drupal::config('system.menu.' . $menu->menu_name)
+        ->get('label');
+      $menu_list[$menu->menu_name] = $menuName;
+    }
+
+    $form['export']['export_menu_list'] = [
+      '#type' => 'checkboxes',
+      '#options' => $menu_list,
+      '#default_value' => array_keys($menu_list),
+      '#title' => $this->t('Select the menus you would like to export'),
+    ];
+
     $form['import'] = [
       '#type' => 'details',
       '#title' => $this->t('Import'),
       '#weight' => 2,
       '#open' => TRUE,
+    ];
+
+    $menus = \Drupal::config('structure_sync.data')->get('menus');
+    $menu_list = [];
+    foreach ($menus as $menu) {
+      $menuName = \Drupal::config('system.menu.' . $menu['menu_name'])
+        ->get('label');
+      $menu_list[$menu['menu_name']] = $menuName;
+    }
+
+    $form['import']['import_menu_list'] = [
+      '#type' => 'checkboxes',
+      '#options' => $menu_list,
+      '#default_value' => array_keys($menu_list),
+      '#title' => $this->t('Select the menus you would like to import'),
     ];
 
     return $form;
