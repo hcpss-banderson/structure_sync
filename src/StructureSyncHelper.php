@@ -195,8 +195,8 @@ class StructureSyncHelper {
     $query->join('menu_link_content', 'mlc', "mlc.uuid = TRIM('menu_link_content:' FROM mt.id)");
     $query->addField('mlcd', 'title');
     $query->addField('mlcd', 'description');
-    $query->addField('mlcd', 'menu_name');
     $query->addField('mlcd', 'link__uri');
+    $query->addField('mlcd', 'link__title');
     $query->addField('mlcd', 'link__options');
     $query->addField('mlcd', 'external');
     $query->addField('mlcd', 'rediscover');
@@ -891,6 +891,409 @@ class StructureSyncHelper {
     }
   }
 
+  /**
+   * Function to import menu links.
+   *
+   * When this function is used without the designated form, you should assign
+   * an array with a key value pair for form with key 'style' and value 'full',
+   * 'safe' or 'force' to apply that import style.
+   */
+  public static function importMenuLinks(array $form, FormStateInterface $form_state = NULL) {
+    StructureSyncHelper::logMessage('Menu links import started');
+
+    // Check if the there is a selection made in a form for what menus need to
+    // be imported.
+    if (is_object($form_state) && $form_state->hasValue('import_menu_list')) {
+      $menusSelected = $form_state->getValue('import_menu_list');
+      $menusSelected = array_filter($menusSelected, 'is_string');
+    }
+    if (array_key_exists('style', $form)) {
+      $style = $form['style'];
+    }
+    else {
+      StructureSyncHelper::logMessage('No style defined on menu links import', 'error');
+      return;
+    }
+
+    StructureSyncHelper::logMessage('Using "' . $style . '" style for menu links import');
+
+    // Get menu links from config.
+    $menusConfig = \Drupal::config('structure_sync.data')->get('menus');
+
+    $menus = [];
+
+    if (isset($menusSelected)) {
+      foreach ($menusConfig as $menu) {
+        if (in_array($menu['menu_name'], array_keys($menusSelected))) {
+          $menus[] = $menu;
+        }
+      }
+    }
+    else {
+      $menus = $menusConfig;
+    }
+
+    $query = \Drupal::database();
+
+    // Import the menu links with the chosen style of importing.
+    switch ($style) {
+      case 'full':
+        $queryCheck = $query->select('block_content', 'bc');
+        $queryCheck->fields('bc', ['uuid']);
+        $uuids = $queryCheck->execute()->fetchAll();
+        $uuids = array_column($uuids, 'uuid');
+
+        $blockRevisionIds = [];
+        foreach ($blocks as $block) {
+          $blockRevisionIds[] = $block['revision_id'];
+        }
+
+        $query->delete('block_content_revision__body')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+        $query->delete('block_content_revision')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+        $query->delete('block_content_field_revision')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+        $query->delete('block_content_field_data')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+        $query->delete('block_content__body')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+        $query->delete('block_content')
+          ->condition('revision_id', $blockRevisionIds, 'NOT IN')
+          ->execute();
+
+        foreach ($blocks as $block_revision) {
+          if (!in_array($block_revision['uuid'], $uuids)) {
+            if ($block_revision['revision_id'] == $block_revision['rev_id_current']) {
+              $query->insert('block_content')->fields([
+                'id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'type' => $block_revision['bundle'],
+                'uuid' => $block_revision['uuid'],
+                'langcode' => $block_revision['langcode'],
+              ])->execute();
+              $query->insert('block_content__body')->fields([
+                'bundle' => $block_revision['bundle'],
+                'deleted' => $block_revision['deleted'],
+                'entity_id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'langcode' => $block_revision['langcode'],
+                'delta' => $block_revision['delta'],
+                'body_value' => $block_revision['body_value'],
+                'body_summary' => $block_revision['body_summary'],
+                'body_format' => $block_revision['body_format'],
+              ])->execute();
+              $query->insert('block_content_field_data')->fields([
+                'id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'type' => $block_revision['bundle'],
+                'langcode' => $block_revision['langcode'],
+                'info' => $block_revision['info'],
+                'changed' => $block_revision['changed'],
+                'revision_created' => $block_revision['revision_created'],
+                'revision_user' => $block_revision['revision_user'],
+                'revision_translation_affected' => $block_revision['revision_translation_affected'],
+                'default_langcode' => $block_revision['default_langcode'],
+              ])->execute();
+
+              StructureSyncHelper::logMessage('Imported current revision of "' . $block_revision['info'] . '"');
+            }
+
+            $query->insert('block_content_revision')->fields([
+              'id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'revision_log' => $block_revision['revision_log'],
+            ])->execute();
+            $query->insert('block_content_revision__body')->fields([
+              'bundle' => $block_revision['bundle'],
+              'deleted' => $block_revision['deleted'],
+              'entity_id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'delta' => $block_revision['delta'],
+              'body_value' => $block_revision['body_value'],
+              'body_summary' => $block_revision['body_summary'],
+              'body_format' => $block_revision['body_format'],
+            ])->execute();
+            $query->insert('block_content_field_revision')->fields([
+              'id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'info' => $block_revision['info'],
+              'changed' => $block_revision['changed'],
+              'revision_created' => $block_revision['revision_created'],
+              'revision_user' => $block_revision['revision_user'],
+              'revision_translation_affected' => $block_revision['revision_translation_affected'],
+              'default_langcode' => $block_revision['default_langcode'],
+            ])->execute();
+
+            StructureSyncHelper::logMessage('Imported "' . $block_revision['info'] . '" revision ' . $block_revision['revision_id']);
+          }
+          else {
+            if ($block_revision['revision_id'] == $block_revision['rev_id_current']) {
+              $query->update('block_content')->fields([
+                'id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'type' => $block_revision['bundle'],
+                'uuid' => $block_revision['uuid'],
+                'langcode' => $block_revision['langcode'],
+              ])->condition('revision_id', $block_revision['revision_id'], '=')
+                ->execute();
+              $query->update('block_content__body')->fields([
+                'bundle' => $block_revision['bundle'],
+                'deleted' => $block_revision['deleted'],
+                'entity_id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'langcode' => $block_revision['langcode'],
+                'delta' => $block_revision['delta'],
+                'body_value' => $block_revision['body_value'],
+                'body_summary' => $block_revision['body_summary'],
+                'body_format' => $block_revision['body_format'],
+              ])->condition('revision_id', $block_revision['revision_id'], '=')
+                ->execute();
+              $query->update('block_content_field_data')->fields([
+                'id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'type' => $block_revision['bundle'],
+                'langcode' => $block_revision['langcode'],
+                'info' => $block_revision['info'],
+                'changed' => $block_revision['changed'],
+                'revision_created' => $block_revision['revision_created'],
+                'revision_user' => $block_revision['revision_user'],
+                'revision_translation_affected' => $block_revision['revision_translation_affected'],
+                'default_langcode' => $block_revision['default_langcode'],
+              ])->condition('revision_id', $block_revision['revision_id'], '=')
+                ->execute();
+
+              StructureSyncHelper::logMessage('Imported current revision of "' . $block_revision['info'] . '"');
+            }
+
+            $query->update('block_content_revision')->fields([
+              'id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'revision_log' => $block_revision['revision_log'],
+            ])->condition('revision_id', $block_revision['revision_id'], '=')
+              ->execute();
+            $query->update('block_content_revision__body')->fields([
+              'bundle' => $block_revision['bundle'],
+              'deleted' => $block_revision['deleted'],
+              'entity_id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'delta' => $block_revision['delta'],
+              'body_value' => $block_revision['body_value'],
+              'body_summary' => $block_revision['body_summary'],
+              'body_format' => $block_revision['body_format'],
+            ])->condition('revision_id', $block_revision['revision_id'], '=')
+              ->execute();
+            $query->update('block_content_field_revision')->fields([
+              'id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'info' => $block_revision['info'],
+              'changed' => $block_revision['changed'],
+              'revision_created' => $block_revision['revision_created'],
+              'revision_user' => $block_revision['revision_user'],
+              'revision_translation_affected' => $block_revision['revision_translation_affected'],
+              'default_langcode' => $block_revision['default_langcode'],
+            ])->condition('revision_id', $block_revision['revision_id'], '=')
+              ->execute();
+
+            StructureSyncHelper::logMessage('Imported "' . $block_revision['info'] . '" revision ' . $block_revision['revision_id']);
+          }
+        }
+
+        StructureSyncHelper::logMessage('Flushing all caches');
+
+        drupal_flush_all_caches();
+
+        StructureSyncHelper::logMessage('Succesfully flushed caches');
+
+        StructureSyncHelper::logMessage('Successfully imported blocks');
+
+        drupal_set_message(t('Successfully imported blocks'));
+        break;
+
+      case 'safe':
+        $queryCheck = $query->select('block_content', 'bc');
+        $queryCheck->fields('bc', ['uuid']);
+        $uuids = $queryCheck->execute()->fetchAll();
+        $uuids = array_column($uuids, 'uuid');
+
+        foreach ($blocks as $block_revision) {
+          if (!in_array($block_revision['uuid'], $uuids)) {
+            if ($block_revision['revision_id'] == $block_revision['rev_id_current']) {
+              $query->insert('block_content')->fields([
+                'id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'type' => $block_revision['bundle'],
+                'uuid' => $block_revision['uuid'],
+                'langcode' => $block_revision['langcode'],
+              ])->execute();
+              $query->insert('block_content__body')->fields([
+                'bundle' => $block_revision['bundle'],
+                'deleted' => $block_revision['deleted'],
+                'entity_id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'langcode' => $block_revision['langcode'],
+                'delta' => $block_revision['delta'],
+                'body_value' => $block_revision['body_value'],
+                'body_summary' => $block_revision['body_summary'],
+                'body_format' => $block_revision['body_format'],
+              ])->execute();
+              $query->insert('block_content_field_data')->fields([
+                'id' => $block_revision['id'],
+                'revision_id' => $block_revision['revision_id'],
+                'type' => $block_revision['bundle'],
+                'langcode' => $block_revision['langcode'],
+                'info' => $block_revision['info'],
+                'changed' => $block_revision['changed'],
+                'revision_created' => $block_revision['revision_created'],
+                'revision_user' => $block_revision['revision_user'],
+                'revision_translation_affected' => $block_revision['revision_translation_affected'],
+                'default_langcode' => $block_revision['default_langcode'],
+              ])->execute();
+
+              StructureSyncHelper::logMessage('Imported current revision of "' . $block_revision['info'] . '"');
+            }
+
+            $query->insert('block_content_revision')->fields([
+              'id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'revision_log' => $block_revision['revision_log'],
+            ])->execute();
+            $query->insert('block_content_revision__body')->fields([
+              'bundle' => $block_revision['bundle'],
+              'deleted' => $block_revision['deleted'],
+              'entity_id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'delta' => $block_revision['delta'],
+              'body_value' => $block_revision['body_value'],
+              'body_summary' => $block_revision['body_summary'],
+              'body_format' => $block_revision['body_format'],
+            ])->execute();
+            $query->insert('block_content_field_revision')->fields([
+              'id' => $block_revision['id'],
+              'revision_id' => $block_revision['revision_id'],
+              'langcode' => $block_revision['langcode'],
+              'info' => $block_revision['info'],
+              'changed' => $block_revision['changed'],
+              'revision_created' => $block_revision['revision_created'],
+              'revision_user' => $block_revision['revision_user'],
+              'revision_translation_affected' => $block_revision['revision_translation_affected'],
+              'default_langcode' => $block_revision['default_langcode'],
+            ])->execute();
+
+            StructureSyncHelper::logMessage('Imported "' . $block_revision['info'] . '" revision ' . $block_revision['revision_id']);
+          }
+        }
+
+        StructureSyncHelper::logMessage('Flushing all caches');
+
+        drupal_flush_all_caches();
+
+        StructureSyncHelper::logMessage('Succesfully flushed caches');
+
+        StructureSyncHelper::logMessage('Successfully imported blocks');
+
+        drupal_set_message(t('Successfully imported blocks'));
+        break;
+
+      case 'force':
+        $query->delete('menu_link_content')->execute();
+        $query->delete('menu_link_content_data')->execute();
+        $query->delete('menu_tree')
+          ->condition('provider', 'menu_link_content')
+          ->execute();
+
+        StructureSyncHelper::logMessage('Deleted all (content) menu links');
+
+        foreach ($menus as $menu) {
+          $id = $query->insert('menu_link_content')->fields([
+            'bundle' => $menu['bundle'],
+            'uuid' => $menu['uuid'],
+            'langcode' => $menu['langcode'],
+          ])->execute();
+          $query->insert('menu_link_content_data')->fields([
+            'id' => $id,
+            'bundle' => $menu['bundle'],
+            'langcode' => $menu['langcode'],
+            'title' => $menu['mlcd_title'],
+            'description' => $menu['mlcd_description'],
+            'menu_name' => $menu['menu_name'],
+            'link__uri' => $menu['link__uri'],
+            'link__title' => $menu['link__title'],
+            'link__options' => $menu['link__options'],
+            'external' => $menu['external'],
+            'rediscover' => $menu['rediscover'],
+            'weight' => $menu['mlcd_weight'],
+            'expanded' => $menu['mlcd_expanded'],
+            'enabled' => $menu['mlcd_enabled'],
+            'parent' => $menu['mlcd_parent'],
+            'changed' => $menu['changed'],
+            'default_langcode' => $menu['default_langcode'],
+          ])->execute();
+          $query->insert('menu_tree')->fields([
+            'menu_name' => $menu['menu_name'],
+            'id' => $menu['id'],
+            'parent' => $menu['parent'],
+            'route_name' => $menu['route_name'],
+            'route_param_key' => $menu['route_param_key'],
+            'route_parameters' => $menu['route_parameters'],
+            'url' => $menu['url'],
+            'title' => $menu['title'],
+            'description' => $menu['description'],
+            'class' => $menu['class'],
+            'options' => $menu['options'],
+            'provider' => $menu['provider'],
+            'enabled' => $menu['enabled'],
+            'discovered' => $menu['discovered'],
+            'expanded' => $menu['expanded'],
+            'weight' => $menu['weight'],
+            'metadata' => $menu['metadata'],
+            'has_children' => $menu['has_children'],
+            'depth' => $menu['depth'],
+            'p1' => $menu['p1'],
+            'p2' => $menu['p2'],
+            'p3' => $menu['p3'],
+            'p4' => $menu['p4'],
+            'p5' => $menu['p5'],
+            'p6' => $menu['p6'],
+            'p7' => $menu['p7'],
+            'p8' => $menu['p8'],
+            'p9' => $menu['p9'],
+            'form_class' => $menu['form_class'],
+          ])->execute();
+
+          StructureSyncHelper::logMessage('Imported "' . $menu['mlcd_title'] . '" into "' . $menu['menu_name'] . '" menu');
+        }
+
+        StructureSyncHelper::logMessage('Flushing all caches');
+
+        drupal_flush_all_caches();
+
+        StructureSyncHelper::logMessage('Succesfully flushed caches');
+
+        StructureSyncHelper::logMessage('Successfully imported menu links');
+
+        drupal_set_message(t('Successfully imported menu links'));
+        break;
+
+      default:
+        StructureSyncHelper::logMessage('Style not recognized', 'error');
+        break;
+    }
+  }
+
   static function logMessage($message, $type = NULL) {
     $log = \Drupal::config('structure_sync.data')->get('log');
 
@@ -945,6 +1348,24 @@ class StructureSyncHelper {
     $form['style'] = 'force';
 
     StructureSyncHelper::importCustomBlocks($form, $form_state);
+  }
+
+  public static function importMenuLinksFull(array &$form, FormStateInterface $form_state = NULL) {
+    $form['style'] = 'full';
+
+    StructureSyncHelper::importMenuLinks($form, $form_state);
+  }
+
+  public static function importMenuLinksSafe(array &$form, FormStateInterface $form_state = NULL) {
+    $form['style'] = 'safe';
+
+    StructureSyncHelper::importMenuLinks($form, $form_state);
+  }
+
+  public static function importMenuLinksForce(array &$form, FormStateInterface $form_state = NULL) {
+    $form['style'] = 'force';
+
+    StructureSyncHelper::importMenuLinks($form, $form_state);
   }
 
 }

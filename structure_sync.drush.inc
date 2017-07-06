@@ -32,6 +32,11 @@ function structure_sync_drush_command() {
     'drupal dependencies' => ['structure_sync'],
     'aliases' => ['ib'],
   ];
+  $items['export-menus'] = [
+    'description' => 'Export menu links',
+    'drupal dependencies' => ['structure_sync'],
+    'aliases' => ['em'],
+  ];
   return $items;
 }
 
@@ -119,4 +124,18 @@ function drush_structure_sync_import_blocks() {
   else {
     drush_log('No choice made for import style on importing custom blocks', 'error');
   }
+}
+
+/**
+ * Call back function drush_structure_sync_export_blocks()
+ *
+ * The call back function name in the  following format
+ *   drush_{module_name}_{item_id_for_command}()
+ */
+function drush_structure_sync_export_menus() {
+  drush_print('Exporting menu links...');
+
+  StructureSyncHelper::exportMenuLinks();
+
+  drush_log('Successfully exported menu links', 'ok');
 }

@@ -80,6 +80,13 @@ class MenuSyncForm extends ConfigFormBase {
       '#open' => TRUE,
     ];
 
+    $form['import']['import_menus_force'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Import menu links (force)'),
+      '#name' => 'importMenusForce',
+      '#submit' => [[$helper, 'importMenuLinksForce']],
+    ];
+
     $menus = \Drupal::config('structure_sync.data')->get('menus');
     $menu_list = [];
     foreach ($menus as $menu) {
