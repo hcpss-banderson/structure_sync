@@ -88,6 +88,13 @@ class MenuSyncForm extends ConfigFormBase {
       '#submit' => [[$helper, 'importMenuLinksSafe']],
     ];
 
+    $form['import']['import_menus_full'] = [
+      '#type' => 'submit',
+      '#value' => $this->t('Import menu links (full)'),
+      '#name' => 'importMenusFull',
+      '#submit' => [[$helper, 'importMenuLinksFull']],
+    ];
+
     $form['import']['import_menus_force'] = [
       '#type' => 'submit',
       '#value' => $this->t('Import menu links (force)'),
