@@ -37,6 +37,11 @@ function structure_sync_drush_command() {
     'drupal dependencies' => ['structure_sync'],
     'aliases' => ['em'],
   ];
+  $items['import-menus'] = [
+    'description' => 'Import menu links',
+    'drupal dependencies' => ['structure_sync'],
+    'aliases' => ['im'],
+  ];
   return $items;
 }
 
@@ -127,7 +132,7 @@ function drush_structure_sync_import_blocks() {
 }
 
 /**
- * Call back function drush_structure_sync_export_blocks()
+ * Call back function drush_structure_sync_export_menus()
  *
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
@@ -138,4 +143,33 @@ function drush_structure_sync_export_menus() {
   StructureSyncHelper::exportMenuLinks();
 
   drush_log('Successfully exported menu links', 'ok');
+}
+
+/**
+ * Call back function drush_structure_sync_import_menus()
+ *
+ * The call back function name in the  following format
+ *   drush_{module_name}_{item_id_for_command}()
+ */
+function drush_structure_sync_import_menus() {
+  drush_print('Importing menu links...');
+
+  $options = [
+    'full' => 'Full',
+    'safe' => 'Safe',
+    'force' => 'Force',
+  ];
+
+  $choice = drush_choice($options, 'What import style would you like?');
+
+  if ($choice) {
+    drush_print('Using "' . $options[$choice] . '" import style');
+
+    StructureSyncHelper::importMenuLinks(['style' => $choice]);
+
+    drush_log('Successfully imported menu links', 'ok');
+  }
+  else {
+    drush_log('No choice made for import style on importing menu links', 'error');
+  }
 }
