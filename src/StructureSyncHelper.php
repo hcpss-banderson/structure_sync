@@ -271,7 +271,6 @@ class StructureSyncHelper {
     switch ($style) {
       case 'full':
         // TODO: Check taxonomy_index.
-
         $queryCheck = $query->select('taxonomy_term_data', 'ttd');
         $queryCheck->fields('ttd', ['uuid']);
         $uuids = $queryCheck->execute()->fetchAll();
@@ -391,9 +390,10 @@ class StructureSyncHelper {
                 $tid = ((int) max($tids)) + 1;
                 $tids[] = $tid;
 
+                // TODO: Change this in database if previously inserted.
                 if ($changeParent) {
-                  foreach ($taxonomies as $voc) {
-                    foreach ($voc as $tax) {
+                  foreach ($taxonomies as &$voc) {
+                    foreach ($voc as &$tax) {
                       $tax['parent'] = $tid;
                     }
                   }
@@ -434,7 +434,6 @@ class StructureSyncHelper {
 
       case 'force':
         // TODO: Check taxonomy_index.
-
         $query->delete('taxonomy_term_field_data')->execute();
         $query->delete('taxonomy_term_hierarchy')->execute();
         $query->delete('taxonomy_term_data')->execute();
@@ -944,15 +943,15 @@ class StructureSyncHelper {
         $uuids = $queryCheck->execute()->fetchAll();
         $uuids = array_column($uuids, 'uuid');
 
-        $newUuids = array_map(function($menu) { return $menu['uuid'];}, $menus);
+        $newUuids = array_map(function ($menu) {
+          return $menu['uuid'];
+        }, $menus);
 
-        $ids = [];
         foreach ($menus as $menu) {
           $newUuids[] = $menu['uuid'];
-          $ids[] = $menu['id'];
         }
 
-        $uuidsToDelete = ['4c81c30a-9199-44e9-a6e1-3a6e5fa69c3e'];
+        $uuidsToDelete = [];
         foreach ($uuids as $uuid) {
           if (!in_array($uuid, $newUuids)) {
             $uuidsToDelete[] = $uuid;
@@ -968,11 +967,11 @@ class StructureSyncHelper {
           $idsToDelete = array_column($idsToDelete, 'id');
         }
 
-        $uuidsToDeletePrefixed = array_map(function($uuid) {
+        $uuidsToDeletePrefixed = array_map(function ($uuid) {
           return "menu_link_content:$uuid";
         }, $uuidsToDelete);
 
-        if (count($idsToDelete) > 0) {
+        if (isset($idsToDelete) && count($idsToDelete) > 0) {
           $query->delete('menu_link_content')
             ->condition('id', $idsToDelete, 'IN')
             ->execute();
@@ -1287,7 +1286,10 @@ class StructureSyncHelper {
     }
   }
 
-  static function logMessage($message, $type = NULL) {
+  /**
+   * General function for logging messages.
+   */
+  public static function logMessage($message, $type = NULL) {
     $log = \Drupal::config('structure_sync.data')->get('log');
 
     if (isset($log) && ($log === FALSE)) {
@@ -1298,63 +1300,92 @@ class StructureSyncHelper {
       case 'error':
         \Drupal::logger('structure_sync')->error($message);
         break;
+
       case 'warning':
         \Drupal::logger('structure_sync')->warning($message);
         break;
+
       default:
         \Drupal::logger('structure_sync')->notice($message);
         break;
     }
   }
 
+  /**
+   * Function to start importing taxonomies with the 'full' style.
+   */
   public static function importTaxonomiesFull(array &$form, FormStateInterface $form_state = NULL) {
     $form['style'] = 'full';
 
     StructureSyncHelper::importTaxonomies($form, $form_state);
   }
 
+  /**
+   * Function to start importing taxonomies with the 'safe' style.
+   */
   public static function importTaxonomiesSafe(array &$form, FormStateInterface $form_state = NULL) {
     $form['style'] = 'safe';
 
     StructureSyncHelper::importTaxonomies($form, $form_state);
   }
 
+  /**
+   * Function to start importing taxonomies with the 'force' style.
+   */
   public static function importTaxonomiesForce(array &$form, FormStateInterface $form_state = NULL) {
     $form['style'] = 'force';
 
     StructureSyncHelper::importTaxonomies($form, $form_state);
   }
 
+  /**
+   * Function to start importing custom blocks with the 'full' style.
+   */
   public static function importCustomBlocksFull(array &$form, FormStateInterface $form_state = NULL) {
     $form['style'] = 'full';
 
     StructureSyncHelper::importCustomBlocks($form, $form_state);
   }
 
+  /**
+   * Function to start importing custom blocks with the 'safe' style.
+   */
   public static function importCustomBlocksSafe(array &$form, FormStateInterface $form_state = NULL) {
     $form['style'] = 'safe';
 
     StructureSyncHelper::importCustomBlocks($form, $form_state);
   }
 
+  /**
+   * Function to start importing custom blocks with the 'force' style.
+   */
   public static function importCustomBlocksForce(array &$form, FormStateInterface $form_state = NULL) {
     $form['style'] = 'force';
 
     StructureSyncHelper::importCustomBlocks($form, $form_state);
   }
 
+  /**
+   * Function to start importing menu links with the 'full' style.
+   */
   public static function importMenuLinksFull(array &$form, FormStateInterface $form_state = NULL) {
     $form['style'] = 'full';
 
     StructureSyncHelper::importMenuLinks($form, $form_state);
   }
 
+  /**
+   * Function to start importing menu links with the 'safe' style.
+   */
   public static function importMenuLinksSafe(array &$form, FormStateInterface $form_state = NULL) {
     $form['style'] = 'safe';
 
     StructureSyncHelper::importMenuLinks($form, $form_state);
   }
 
+  /**
+   * Function to start importing menu links with the 'force' style.
+   */
   public static function importMenuLinksForce(array &$form, FormStateInterface $form_state = NULL) {
     $form['style'] = 'force';
 

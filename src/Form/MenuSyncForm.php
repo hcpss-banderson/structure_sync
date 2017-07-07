@@ -5,6 +5,9 @@ namespace Drupal\structure_sync\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\structure_sync\StructureSyncHelper;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Database\Connection;
 
 /**
  * Import and export form for content in structure, like taxonomy terms.
@@ -12,10 +15,35 @@ use Drupal\structure_sync\StructureSyncHelper;
 class MenuSyncForm extends ConfigFormBase {
 
   /**
+   * The database.
+   *
+   * @var \Drupal\Core\Database\Connection
+   */
+  protected $database;
+
+  /**
    * {@inheritdoc}
    */
   public function getFormId() {
     return 'structure_sync_menus';
+  }
+
+  /**
+   * Class constructor.
+   */
+  public function __construct(ConfigFactoryInterface $config_factory, Connection $database) {
+    parent::__construct($config_factory);
+    $this->database = $database;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('config.factory'),
+      $container->get('database')
+    );
   }
 
   /**
@@ -55,13 +83,12 @@ class MenuSyncForm extends ConfigFormBase {
 
     // Get a list of all menus (and their machine names).
     $menu_list = [];
-    $query = \Drupal::database()
-      ->select('menu_tree', 'mt')
+    $query = $this->database->select('menu_tree', 'mt')
       ->fields('mt', ['menu_name']);
     $query->condition('provider', 'menu_link_content', '=');
     $menus = $query->execute()->fetchAll();
     foreach ($menus as $menu) {
-      $menuName = \Drupal::config('system.menu.' . $menu->menu_name)
+      $menuName = $this->config('system.menu.' . $menu->menu_name)
         ->get('label');
       $menu_list[$menu->menu_name] = $menuName;
     }
@@ -102,10 +129,10 @@ class MenuSyncForm extends ConfigFormBase {
       '#submit' => [[$helper, 'importMenuLinksForce']],
     ];
 
-    $menus = \Drupal::config('structure_sync.data')->get('menus');
+    $menus = $this->config('structure_sync.data')->get('menus');
     $menu_list = [];
     foreach ($menus as $menu) {
-      $menuName = \Drupal::config('system.menu.' . $menu['menu_name'])
+      $menuName = $this->config('system.menu.' . $menu['menu_name'])
         ->get('label');
       $menu_list[$menu['menu_name']] = $menuName;
     }

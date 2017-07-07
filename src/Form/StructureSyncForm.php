@@ -4,7 +4,6 @@ namespace Drupal\structure_sync\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\structure_sync\StructureSyncHelper;
 
 /**
  * Import and export form for content in structure, like taxonomy terms.
@@ -36,7 +35,7 @@ class StructureSyncForm extends ConfigFormBase {
       '#title' => $this->t('General settings'),
     ];
 
-    $log = \Drupal::config('structure_sync.data')->get('log');
+    $log = $this->config('structure_sync.data')->get('log');
 
     if ($log === NULL) {
       $log = TRUE;
@@ -65,8 +64,7 @@ class StructureSyncForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    \Drupal::service('config.factory')
-      ->getEditable('structure_sync.data')
+    $this->config('structure_sync.data')
       ->set('log', $form_state->getValue('log'))
       ->save();
   }

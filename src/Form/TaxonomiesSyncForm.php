@@ -2,9 +2,12 @@
 
 namespace Drupal\structure_sync\Form;
 
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\structure_sync\StructureSyncHelper;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Import and export form for content in structure, like taxonomy terms.
@@ -12,10 +15,35 @@ use Drupal\structure_sync\StructureSyncHelper;
 class TaxonomiesSyncForm extends ConfigFormBase {
 
   /**
+   * The entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
    * {@inheritdoc}
    */
   public function getFormId() {
     return 'structure_sync_taxonomies';
+  }
+
+  /**
+   * Class constructor.
+   */
+  public function __construct(ConfigFactoryInterface $config_factory, EntityTypeManagerInterface $entityTypeManager) {
+    parent::__construct($config_factory);
+    $this->entityTypeManager = $entityTypeManager;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('config.factory'),
+      $container->get('entity_type.manager')
+    );
   }
 
   /**
@@ -55,7 +83,7 @@ class TaxonomiesSyncForm extends ConfigFormBase {
 
     // Get a list of all vocabularies (their machine names).
     $vocabulary_list = [];
-    $vocabularies = \Drupal::entityTypeManager()
+    $vocabularies = $this->entityTypeManager
       ->getStorage('taxonomy_vocabulary')->loadMultiple();
     foreach ($vocabularies as $vocabulary) {
       $vocabulary_list[$vocabulary->id()] = $vocabulary->id();
@@ -97,7 +125,7 @@ class TaxonomiesSyncForm extends ConfigFormBase {
       '#submit' => [[$helper, 'importTaxonomiesForce']],
     ];
 
-    $voc_list = array_keys(\Drupal::config('structure_sync.data')
+    $voc_list = array_keys($this->config('structure_sync.data')
       ->get('taxonomies'));
 
     $vocabulary_list_config = array_combine($voc_list, $voc_list);

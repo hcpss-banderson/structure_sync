@@ -2,9 +2,12 @@
 
 namespace Drupal\structure_sync\Form;
 
+use Drupal\Core\Database\Connection;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\structure_sync\StructureSyncHelper;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
 
 /**
  * Import and export form for content in structure, like taxonomy terms.
@@ -12,10 +15,35 @@ use Drupal\structure_sync\StructureSyncHelper;
 class BlocksSyncForm extends ConfigFormBase {
 
   /**
+   * The database.
+   *
+   * @var \Drupal\Core\Database\Connection
+   */
+  protected $database;
+
+  /**
    * {@inheritdoc}
    */
   public function getFormId() {
     return 'structure_sync_blocks';
+  }
+
+  /**
+   * Class constructor.
+   */
+  public function __construct(ConfigFactoryInterface $config_factory, Connection $database) {
+    parent::__construct($config_factory);
+    $this->database = $database;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('config.factory'),
+      $container->get('database')
+    );
   }
 
   /**
@@ -55,9 +83,8 @@ class BlocksSyncForm extends ConfigFormBase {
 
     // Get a list of all blocks (their current names and uuids).
     $block_list = [];
-    $query = \Drupal::database()
-      ->select('block_content', 'bc');
-    $query->fields('bc', ['uuid',]);
+    $query = $this->database->select('block_content', 'bc');
+    $query->fields('bc', ['uuid']);
     $query->addField('bcfd', 'info');
     $query->join('block_content_field_data', 'bcfd', 'bcfd.id = bc.id');
     $blocks = $query->execute()->fetchAll();
@@ -101,8 +128,7 @@ class BlocksSyncForm extends ConfigFormBase {
       '#submit' => [[$helper, 'importCustomBlocksForce']],
     ];
 
-    $block_list = \Drupal::config('structure_sync.data')
-      ->get('blocks');
+    $block_list = $this->config('structure_sync.data')->get('blocks');
 
     $block_list_config = [];
 
