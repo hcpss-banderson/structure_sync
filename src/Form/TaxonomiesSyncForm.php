@@ -86,13 +86,13 @@ class TaxonomiesSyncForm extends ConfigFormBase {
     $vocabularies = $this->entityTypeManager
       ->getStorage('taxonomy_vocabulary')->loadMultiple();
     foreach ($vocabularies as $vocabulary) {
-      $vocabulary_list[$vocabulary->id()] = $vocabulary->id();
+      $vocabulary_list[$vocabulary->id()] = $vocabulary->label();
     }
 
     $form['export']['export_voc_list'] = [
       '#type' => 'checkboxes',
       '#options' => $vocabulary_list,
-      '#default_value' => $vocabulary_list,
+      '#default_value' => array_keys($vocabulary_list),
       '#title' => $this->t('Select the vocabularies you would like to export'),
     ];
 
@@ -129,11 +129,14 @@ class TaxonomiesSyncForm extends ConfigFormBase {
       ->get('taxonomies'));
 
     $vocabulary_list_config = array_combine($voc_list, $voc_list);
+    foreach ($vocabulary_list_config as $voc) {
+      $vocabulary_list_config[$voc] = $vocabulary_list[$voc];
+    }
 
     $form['import']['import_voc_list'] = [
       '#type' => 'checkboxes',
       '#options' => $vocabulary_list_config,
-      '#default_value' => $vocabulary_list_config,
+      '#default_value' => array_keys($vocabulary_list_config),
       '#title' => $this->t('Select the vocabularies you would like to import'),
     ];
 
