@@ -359,72 +359,87 @@ class StructureSyncHelper {
         break;
 
       case 'safe':
-        $queryCheck = $query->select('taxonomy_term_data', 'ttd');
-        $queryCheck->fields('ttd', ['uuid']);
-        $uuids = $queryCheck->execute()->fetchAll();
-        $uuids = array_column($uuids, 'uuid');
+        $tidsDone = [];
+        $tidsLeft = [];
+        $newTids = [];
+        $firstRun = TRUE;
+        while ($firstRun || count($tidsLeft) > 0) {
+          foreach ($taxonomies as $vid => $vocabulary) {
+            foreach ($vocabulary as $taxonomy) {
+              $query = \Drupal::entityQuery('taxonomy_term');
+              $query->condition('vid', $vid);
+              $query->condition('name', $taxonomy['name']);
+              $tids = $query->execute();
 
-        $queryCheck->fields('ttd', ['tid']);
-        $tids = $queryCheck->execute()->fetchAll();
-        $tids = array_column($tids, 'tid');
-
-        $parents = [];
-        foreach ($taxonomies as $vocabulary) {
-          foreach ($vocabulary as $taxonomy) {
-            $parents[] = $taxonomy['parent'];
-          }
-        }
-
-        foreach ($taxonomies as $vid => $vocabulary) {
-          foreach ($vocabulary as $taxonomy) {
-            if (!in_array($taxonomy['uuid'], $uuids)) {
-              $tid = $taxonomy['tid'];
-
-              if (in_array($tid, $tids)) {
-                $changeParent = FALSE;
-
-                if (in_array($tid, $parents)) {
-                  $changeParent = TRUE;
-                }
-
-                $tid = ((int) max($tids)) + 1;
-                $tids[] = $tid;
-
-                // TODO: Change this in database if previously inserted.
-                if ($changeParent) {
-                  foreach ($taxonomies as &$voc) {
-                    foreach ($voc as &$tax) {
-                      $tax['parent'] = $tid;
+              if (count($tids) <= 0) {
+                if (!in_array($taxonomy['tid'], $tidsDone) && ($taxonomy['parent'] === '0' || in_array($taxonomy['parent'], $tidsDone))) {
+                  if (!in_array($taxonomy['tid'], $tidsDone)) {
+                    $parent = $taxonomy['parent'];
+                    if (isset($newTids[$taxonomy['parent']])) {
+                      $parent = $newTids[$taxonomy['parent']];
                     }
+
+                    Term::create([
+                      'vid' => $vid,
+                      'langcode' => $taxonomy['langcode'],
+                      'name' => $taxonomy['name'],
+                      'description' => [
+                        'value' => $taxonomy['description__value'],
+                        'format' => $taxonomy['description__format'],
+                      ],
+                      'weight' => $taxonomy['weight'],
+                      'parent' => [$parent],
+                    ])->save();
+
+                    $query = \Drupal::entityQuery('taxonomy_term');
+                    $query->condition('vid', $vid);
+                    $query->condition('name', $taxonomy['name']);
+                    $tids = $query->execute();
+                    if (count($tids) > 0) {
+                      $terms = Term::loadMultiple($tids);
+                    }
+
+                    if (isset($terms) && count($terms) > 0) {
+                      reset($terms);
+                      $newTid = key($terms);
+                      $newTids[$taxonomy['tid']] = $newTid;
+                    }
+
+                    $tidsDone[] = $taxonomy['tid'];
+
+                    if (in_array($taxonomy['tid'], $tidsLeft)) {
+                      unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
+                    }
+
+                    StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+                  }
+                }
+                else {
+                  if (!in_array($taxonomy['tid'], $tidsLeft)) {
+                    $tidsLeft[] = $taxonomy['tid'];
                   }
                 }
               }
+              else if (!in_array($taxonomy['tid'], $tidsDone)) {
+                $query = \Drupal::entityQuery('taxonomy_term');
+                $query->condition('vid', $vid);
+                $query->condition('name', $taxonomy['name']);
+                $tids = $query->execute();
+                if (count($tids) > 0) {
+                  $terms = Term::loadMultiple($tids);
+                }
 
-              $query->insert('taxonomy_term_data')->fields([
-                'tid' => $tid,
-                'vid' => $vid,
-                'uuid' => $taxonomy['uuid'],
-                'langcode' => $taxonomy['langcode'],
-              ])->execute();
-              $query->insert('taxonomy_term_hierarchy')->fields([
-                'tid' => $tid,
-                'parent' => $taxonomy['parent'],
-              ])->execute();
-              $query->insert('taxonomy_term_field_data')->fields([
-                'tid' => $tid,
-                'vid' => $vid,
-                'langcode' => $taxonomy['langcode'],
-                'name' => $taxonomy['name'],
-                'description__value' => $taxonomy['description__value'],
-                'description__format' => $taxonomy['description__format'],
-                'weight' => $taxonomy['weight'],
-                'changed' => $taxonomy['changed'],
-                'default_langcode' => $taxonomy['default_langcode'],
-              ])->execute();
-
-              StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+                if (isset($terms) && count($terms) > 0) {
+                  reset($terms);
+                  $newTid = key($terms);
+                  $newTids[$taxonomy['tid']] = $newTid;
+                  $tidsDone[] = $taxonomy['tid'];
+                }
+              }
             }
           }
+
+          $firstRun = FALSE;
         }
 
         StructureSyncHelper::logMessage('Successfully imported taxonomies');
