@@ -4,6 +4,7 @@ namespace Drupal\structure_sync;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Database\Database;
+use Drupal\taxonomy\Entity\Term;
 
 /**
  * Container of functions for importing and exporting content in structure.
@@ -442,27 +443,17 @@ class StructureSyncHelper {
 
         foreach ($taxonomies as $vid => $vocabulary) {
           foreach ($vocabulary as $taxonomy) {
-            $query->insert('taxonomy_term_data')->fields([
-              'tid' => $taxonomy['tid'],
-              'vid' => $vid,
-              'uuid' => $taxonomy['uuid'],
-              'langcode' => $taxonomy['langcode'],
-            ])->execute();
-            $query->insert('taxonomy_term_hierarchy')->fields([
-              'tid' => $taxonomy['tid'],
-              'parent' => $taxonomy['parent'],
-            ])->execute();
-            $query->insert('taxonomy_term_field_data')->fields([
-              'tid' => $taxonomy['tid'],
+            Term::create([
               'vid' => $vid,
               'langcode' => $taxonomy['langcode'],
               'name' => $taxonomy['name'],
-              'description__value' => $taxonomy['description__value'],
-              'description__format' => $taxonomy['description__format'],
+              'description' => [
+                'value' => $taxonomy['description__value'],
+                'format' => $taxonomy['description__format'],
+              ],
               'weight' => $taxonomy['weight'],
-              'changed' => $taxonomy['changed'],
-              'default_langcode' => $taxonomy['default_langcode'],
-            ])->execute();
+              'parent' => [$taxonomy['parent']],
+            ])->save();
 
             StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
           }
