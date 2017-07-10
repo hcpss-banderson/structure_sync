@@ -28,7 +28,7 @@ class StructureSyncHelper {
       $vocabularies = \Drupal::entityTypeManager()
         ->getStorage('taxonomy_vocabulary')->loadMultiple();
       foreach ($vocabularies as $vocabulary) {
-        if (in_array($vocabulary->id(), $vocabulary_list)) {
+        if (is_object($vocabulary) && in_array($vocabulary->id(), $vocabulary_list)) {
           $vocabulary_list[] = $vocabulary->id();
         }
       }
@@ -40,11 +40,10 @@ class StructureSyncHelper {
       return;
     }
 
-    // Clear the (previous) taxonomies data in the config, but don't save yet
-    // (just in case anything goes wrong).
+    // Clear the (previous) taxonomies data in the config.
     $config = \Drupal::service('config.factory')
       ->getEditable('structure_sync.data');
-    $config->clear('taxonomies');
+    $config->clear('taxonomies')->save();
 
     // Get all taxonomies from each (previously retrieved) vocabulary.
     foreach ($vocabulary_list as $vocabulary) {
@@ -434,29 +433,72 @@ class StructureSyncHelper {
         break;
 
       case 'force':
-        // TODO: Check taxonomy_index.
-        $query->delete('taxonomy_term_field_data')->execute();
-        $query->delete('taxonomy_term_hierarchy')->execute();
-        $query->delete('taxonomy_term_data')->execute();
+        $query = \Drupal::entityQuery('taxonomy_term');
+        $tids = $query->execute();
+        $controller = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+        $entities = $controller->loadMultiple($tids);
+        $controller->delete($entities);
 
         StructureSyncHelper::logMessage('Deleted all taxonomies');
 
-        foreach ($taxonomies as $vid => $vocabulary) {
-          foreach ($vocabulary as $taxonomy) {
-            Term::create([
-              'vid' => $vid,
-              'langcode' => $taxonomy['langcode'],
-              'name' => $taxonomy['name'],
-              'description' => [
-                'value' => $taxonomy['description__value'],
-                'format' => $taxonomy['description__format'],
-              ],
-              'weight' => $taxonomy['weight'],
-              'parent' => [$taxonomy['parent']],
-            ])->save();
+        $tidsDone = [];
+        $tidsLeft = [];
+        $newTids = [];
+        $firstRun = TRUE;
+        while ($firstRun || count($tidsLeft) > 0) {
+          foreach ($taxonomies as $vid => $vocabulary) {
+            foreach ($vocabulary as $taxonomy) {
+              if (!in_array($taxonomy['tid'], $tidsDone) && ($taxonomy['parent'] === '0' || in_array($taxonomy['parent'], $tidsDone))) {
+                if (!in_array($taxonomy['tid'], $tidsDone)) {
+                  $parent = $taxonomy['parent'];
+                  if (isset($newTids[$taxonomy['parent']])) {
+                    $parent = $newTids[$taxonomy['parent']];
+                  }
 
-            StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+                  Term::create([
+                    'vid' => $vid,
+                    'langcode' => $taxonomy['langcode'],
+                    'name' => $taxonomy['name'],
+                    'description' => [
+                      'value' => $taxonomy['description__value'],
+                      'format' => $taxonomy['description__format'],
+                    ],
+                    'weight' => $taxonomy['weight'],
+                    'parent' => [$parent],
+                  ])->save();
+
+                  $query = \Drupal::entityQuery('taxonomy_term');
+                  $query->condition('vid', $vid);
+                  $query->condition('name', $taxonomy['name']);
+                  $tids = $query->execute();
+                  if (count($tids) > 0) {
+                    $terms = Term::loadMultiple($tids);
+                  }
+
+                  if (isset($terms) && count($terms) > 0) {
+                    reset($terms);
+                    $newTid = key($terms);
+                    $newTids[$taxonomy['tid']] = $newTid;
+                  }
+
+                  $tidsDone[] = $taxonomy['tid'];
+
+                  if (in_array($taxonomy['tid'], $tidsLeft)) {
+                    unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
+                  }
+
+                  StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+                }
+              }
+              else {
+                if (!in_array($taxonomy['tid'], $tidsLeft)) {
+                  $tidsLeft[] = $taxonomy['tid'];
+                }
+              }
+            }
           }
+
+          $firstRun = FALSE;
         }
 
         StructureSyncHelper::logMessage('Successfully imported taxonomies');
