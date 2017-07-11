@@ -28,9 +28,7 @@ class StructureSyncHelper {
       $vocabularies = \Drupal::entityTypeManager()
         ->getStorage('taxonomy_vocabulary')->loadMultiple();
       foreach ($vocabularies as $vocabulary) {
-        if (is_object($vocabulary) && in_array($vocabulary->id(), $vocabulary_list)) {
-          $vocabulary_list[] = $vocabulary->id();
-        }
+        $vocabulary_list[] = $vocabulary->id();
       }
     }
     if (!count($vocabulary_list)) {
@@ -47,28 +45,41 @@ class StructureSyncHelper {
 
     // Get all taxonomies from each (previously retrieved) vocabulary.
     foreach ($vocabulary_list as $vocabulary) {
-      $query = \Drupal::database()
-        ->select('taxonomy_term_field_data', 'ttfd');
-      $query->fields('ttfd', [
-        'tid',
-        'name',
-        'langcode',
-        'description__value',
-        'description__format',
-        'weight',
-        'changed',
-        'default_langcode',
-      ]);
-      $query->addField('tth', 'parent');
-      $query->join('taxonomy_term_hierarchy', 'tth', 'ttfd.tid = tth.tid');
-      $query->addField('ttd', 'uuid');
-      $query->join('taxonomy_term_data', 'ttd', 'ttfd.tid = ttd.tid');
-      $query->condition('ttfd.vid', $vocabulary);
-      $taxonomies = $query->execute()->fetchAll();
+      $query = \Drupal::entityQuery('taxonomy_term');
+      $query->condition('vid', $vocabulary);
+      $tids = $query->execute();
+      $controller = \Drupal::entityTypeManager()
+        ->getStorage('taxonomy_term');
+      $entities = $controller->loadMultiple($tids);
+
+      $parents = [];
+      foreach ($tids as $tid) {
+        $parent = \Drupal::entityTypeManager()
+          ->getStorage('taxonomy_term')->loadParents($tid);
+        $parent = reset($parent);
+
+        if (is_object($parent)) {
+          $parents[$tid] = $parent->id();
+        }
+      }
+
+      $taxonomies = [];
+      foreach ($entities as $entity) {
+        $taxonomies[] = [
+          'vid' => $vocabulary,
+          'tid' => $entity->id(),
+          'langcode' => $entity->langcode->getValue()[0]['value'],
+          'name' => $entity->name->getValue()[0]['value'],
+          'description__value' => $entity->get('description')->getValue()[0]['value'],
+          'description__format' => $entity->get('description')->getValue()[0]['format'],
+          'weight' => $entity->weight->getValue()[0]['value'],
+          'parent' => isset($parents[$entity->id()]) ? $parents[$entity->id()] : '0',
+        ];
+      }
 
       // Save the retrieved taxonomies to the config.
       $config
-        ->set('taxonomies' . '.' . $vocabulary, json_decode(json_encode($taxonomies), TRUE))
+        ->set('taxonomies' . '.' . $vocabulary, $taxonomies)
         ->save();
 
       StructureSyncHelper::logMessage('Exported ' . $vocabulary);
@@ -270,6 +281,93 @@ class StructureSyncHelper {
     // Import the taxonomies with the chosen style of importing.
     switch ($style) {
       case 'full':
+        $tidsDone = [];
+        $tidsLeft = [];
+        $newTids = [];
+        $firstRun = TRUE;
+        while ($firstRun || count($tidsLeft) > 0) {
+          foreach ($taxonomies as $vid => $vocabulary) {
+            foreach ($vocabulary as $taxonomy) {
+              $query = \Drupal::entityQuery('taxonomy_term');
+              $query->condition('vid', $vid);
+              $query->condition('name', $taxonomy['name']);
+              $tids = $query->execute();
+
+              if (count($tids) <= 0) {
+                if (!in_array($taxonomy['tid'], $tidsDone) && ($taxonomy['parent'] === '0' || in_array($taxonomy['parent'], $tidsDone))) {
+                  if (!in_array($taxonomy['tid'], $tidsDone)) {
+                    $parent = $taxonomy['parent'];
+                    if (isset($newTids[$taxonomy['parent']])) {
+                      $parent = $newTids[$taxonomy['parent']];
+                    }
+
+                    Term::create([
+                      'vid' => $vid,
+                      'langcode' => $taxonomy['langcode'],
+                      'name' => $taxonomy['name'],
+                      'description' => [
+                        'value' => $taxonomy['description__value'],
+                        'format' => $taxonomy['description__format'],
+                      ],
+                      'weight' => $taxonomy['weight'],
+                      'parent' => [$parent],
+                    ])->save();
+
+                    $query = \Drupal::entityQuery('taxonomy_term');
+                    $query->condition('vid', $vid);
+                    $query->condition('name', $taxonomy['name']);
+                    $tids = $query->execute();
+                    if (count($tids) > 0) {
+                      $terms = Term::loadMultiple($tids);
+                    }
+
+                    if (isset($terms) && count($terms) > 0) {
+                      reset($terms);
+                      $newTid = key($terms);
+                      $newTids[$taxonomy['tid']] = $newTid;
+                    }
+
+                    $tidsDone[] = $taxonomy['tid'];
+
+                    if (in_array($taxonomy['tid'], $tidsLeft)) {
+                      unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
+                    }
+
+                    StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+                  }
+                }
+                else {
+                  if (!in_array($taxonomy['tid'], $tidsLeft)) {
+                    $tidsLeft[] = $taxonomy['tid'];
+                  }
+                }
+              }
+              else if (!in_array($taxonomy['tid'], $tidsDone)) {
+                $query = \Drupal::entityQuery('taxonomy_term');
+                $query->condition('vid', $vid);
+                $query->condition('name', $taxonomy['name']);
+                $tids = $query->execute();
+                if (count($tids) > 0) {
+                  $terms = Term::loadMultiple($tids);
+                }
+
+                if (isset($terms) && count($terms) > 0) {
+                  reset($terms);
+                  $newTid = key($terms);
+                  $newTids[$taxonomy['tid']] = $newTid;
+                  $tidsDone[] = $taxonomy['tid'];
+                }
+              }
+            }
+          }
+
+          $firstRun = FALSE;
+        }
+
+        StructureSyncHelper::logMessage('Successfully imported taxonomies');
+
+        drupal_set_message(t('Successfully imported taxonomies'));
+
         // TODO: Check taxonomy_index.
         $queryCheck = $query->select('taxonomy_term_data', 'ttd');
         $queryCheck->fields('ttd', ['uuid']);
@@ -450,7 +548,8 @@ class StructureSyncHelper {
       case 'force':
         $query = \Drupal::entityQuery('taxonomy_term');
         $tids = $query->execute();
-        $controller = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+        $controller = \Drupal::entityTypeManager()
+          ->getStorage('taxonomy_term');
         $entities = $controller->loadMultiple($tids);
         $controller->delete($entities);
 
