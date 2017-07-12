@@ -92,6 +92,7 @@ class TaxonomiesController extends ControllerBase {
           'description__format' => $entity->get('description')->getValue()[0]['format'],
           'weight' => $entity->weight->getValue()[0]['value'],
           'parent' => isset($parents[$entity->id()]) ? $parents[$entity->id()] : '0',
+          'uuid' => $entity->uuid(),
         ];
       }
 
@@ -358,6 +359,7 @@ class TaxonomiesController extends ControllerBase {
                       ],
                       'weight' => $taxonomy['weight'],
                       'parent' => [$parent],
+                      'uuid' => $taxonomy['uuid'],
                     ])->save();
 
                     $query = \Drupal::entityQuery('taxonomy_term');
@@ -450,6 +452,7 @@ class TaxonomiesController extends ControllerBase {
                     ],
                     'weight' => $taxonomy['weight'],
                     'parent' => [$parent],
+                    'uuid' => $taxonomy['uuid'],
                   ])->save();
 
                   $query = \Drupal::entityQuery('taxonomy_term');
