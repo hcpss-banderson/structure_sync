@@ -536,7 +536,7 @@ class StructureSyncHelper {
   /**
    * General function for logging messages.
    */
-  public static function logMessage($message, $type = NULL) {
+  public static function logMessage($message, $type = NULL, $context = []) {
     $log = \Drupal::config('structure_sync.data')->get('log');
 
     if (isset($log) && ($log === FALSE)) {
@@ -545,15 +545,15 @@ class StructureSyncHelper {
 
     switch ($type) {
       case 'error':
-        \Drupal::logger('structure_sync')->error($message);
+        \Drupal::logger('structure_sync')->error($message, $context);
         break;
 
       case 'warning':
-        \Drupal::logger('structure_sync')->warning($message);
+        \Drupal::logger('structure_sync')->warning($message, $context);
         break;
 
       default:
-        \Drupal::logger('structure_sync')->notice($message);
+        \Drupal::logger('structure_sync')->notice($message, $context);
         break;
     }
   }
@@ -637,6 +637,25 @@ class StructureSyncHelper {
     $form['style'] = 'force';
 
     StructureSyncHelper::importMenuLinks($form, $form_state);
+  }
+
+  /**
+   * Function to get an entity query.
+   *
+   * @param $entityType
+   * @return \Drupal\Core\Entity\Query\QueryInterface
+   */
+  public static function getEntityQuery($entityType) {
+    return \Drupal::entityQuery($entityType);
+  }
+
+  /**
+   * Function to get an entity type manager.
+   *
+   * @return \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  public static function getEntityManager() {
+    return \Drupal::entityTypeManager();
   }
 
 }
