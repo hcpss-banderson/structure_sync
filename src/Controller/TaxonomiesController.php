@@ -152,15 +152,15 @@ class TaxonomiesController extends ControllerBase {
     switch ($style) {
       case 'full':
         $batch = [
-          'title' => t('Importing taxonomies...'),
+          'title' => $this->t('Importing taxonomies...'),
           'operations' => [
             [
               '\Drupal\structure_sync\Controller\TaxonomiesController::deleteDeletedTaxonomies',
-              [$taxonomies]
+              [$taxonomies],
             ],
             [
               '\Drupal\structure_sync\Controller\TaxonomiesController::importTaxonomiesFull',
-              [$taxonomies]
+              [$taxonomies],
             ],
           ],
           'finished' => '\Drupal\structure_sync\Controller\TaxonomiesController::taxonomiesImportFinishedCallback',
@@ -170,11 +170,11 @@ class TaxonomiesController extends ControllerBase {
 
       case 'safe':
         $batch = [
-          'title' => t('Importing taxonomies...'),
+          'title' => $this->t('Importing taxonomies...'),
           'operations' => [
             [
               '\Drupal\structure_sync\Controller\TaxonomiesController::importTaxonomiesSafe',
-              [$taxonomies]
+              [$taxonomies],
             ],
           ],
           'finished' => '\Drupal\structure_sync\Controller\TaxonomiesController::taxonomiesImportFinishedCallback',
@@ -184,15 +184,15 @@ class TaxonomiesController extends ControllerBase {
 
       case 'force':
         $batch = [
-          'title' => t('Importing taxonomies...'),
+          'title' => $this->t('Importing taxonomies...'),
           'operations' => [
             [
               '\Drupal\structure_sync\Controller\TaxonomiesController::deleteTaxonomies',
-              []
+              [],
             ],
             [
               '\Drupal\structure_sync\Controller\TaxonomiesController::importTaxonomiesForce',
-              [$taxonomies]
+              [$taxonomies],
             ],
           ],
           'finished' => '\Drupal\structure_sync\Controller\TaxonomiesController::taxonomiesImportFinishedCallback',
@@ -206,7 +206,10 @@ class TaxonomiesController extends ControllerBase {
     }
   }
 
-  public static function deleteDeletedTaxonomies ($taxonomies, &$context) {
+  /**
+   * Function to delete the taxonomies that should be removed in this import.
+   */
+  public static function deleteDeletedTaxonomies($taxonomies, &$context) {
     $uuidsInConfig = [];
     foreach ($taxonomies as $voc) {
       foreach ($voc as $taxonomy) {
@@ -225,7 +228,13 @@ class TaxonomiesController extends ControllerBase {
     StructureSyncHelper::logMessage('Deleted taxonomies that were not in config');
   }
 
-  public static function importTaxonomiesFull ($taxonomies, &$context) {
+  /**
+   * Function to fully import the taxonomies.
+   *
+   * Basically a safe import with update actions for already existing taxonomy
+   * terms.
+   */
+  public static function importTaxonomiesFull($taxonomies, &$context) {
     $uuidsInConfig = [];
     foreach ($taxonomies as $voc) {
       foreach ($voc as $taxonomy) {
@@ -339,7 +348,13 @@ class TaxonomiesController extends ControllerBase {
     $context['finished'] = 1;
   }
 
-  public static function importTaxonomiesSafe ($taxonomies, &$context) {
+  /**
+   * Function to safely import taxonomies.
+   *
+   * Safely meaning that it should only add what isn't already there and not
+   * delete and/or update any terms.
+   */
+  public static function importTaxonomiesSafe($taxonomies, &$context) {
     $tidsDone = [];
     $tidsLeft = [];
     $newTids = [];
@@ -436,7 +451,10 @@ class TaxonomiesController extends ControllerBase {
     $context['finished'] = 1;
   }
 
-  public static function deleteTaxonomies () {
+  /**
+   * Function to delete all taxonomy terms.
+   */
+  public static function deleteTaxonomies() {
     $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
     $tids = $query->execute();
     $controller = StructureSyncHelper::getEntityManager()
@@ -447,7 +465,10 @@ class TaxonomiesController extends ControllerBase {
     StructureSyncHelper::logMessage('Deleted all taxonomies');
   }
 
-  public static function importTaxonomiesForce ($taxonomies, &$context) {
+  /**
+   * Function to import (create) all taxonomies that need to be imported.
+   */
+  public static function importTaxonomiesForce($taxonomies, &$context) {
     $tidsDone = [];
     $tidsLeft = [];
     $newTids = [];
@@ -521,7 +542,10 @@ class TaxonomiesController extends ControllerBase {
     $context['finished'] = 1;
   }
 
-  public static function taxonomiesImportFinishedCallback ($success, $results, $operations) {
+  /**
+   * Function that signals that the import of taxonomies has finished.
+   */
+  public static function taxonomiesImportFinishedCallback($success, $results, $operations) {
     StructureSyncHelper::logMessage('Successfully imported taxonomies');
 
     drupal_set_message(t('Successfully imported taxonomies'));
