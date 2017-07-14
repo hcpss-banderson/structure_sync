@@ -71,6 +71,7 @@ class MenuLinksController extends ControllerBase {
         'expanded' => $menuLink->expanded->getValue()[0]['value'],
         'weight' => $menuLink->weight->getValue()[0]['value'],
         'langcode' => $menuLink->langcode->getValue()[0]['value'],
+        'uuid' => $menuLink->uuid(),
       ];
     }
 
@@ -305,94 +306,140 @@ class MenuLinksController extends ControllerBase {
         break;
 
       case 'safe':
-        $entities = $this->entityTypeManager->getStorage('menu_link_content')
-          ->loadMultiple();
-
-        foreach ($entities as $entity) {
-          for ($i = 0; $i < count($menus); $i++) {
-            if (
-              $entity->menu_name->getValue()[0]['value'] === $menus[$i]['menu_name']
-              && $entity->title->getValue()[0]['value'] === $menus[$i]['title']
-              && $entity->parent->getValue()[0]['value'] === $menus[$i]['parent']
-              && $entity->weight->getValue()[0]['value'] === $menus[$i]['weight']
-            ) {
-              unset($menus[$i]);
-            }
-          }
-        }
-
-        foreach ($menus as $menuLink) {
-          MenuLinkContent::create([
-            'title' => $menuLink['title'],
-            'link' => [
-              'uri' => $menuLink['uri'],
-              'title' => $menuLink['link_title'],
+        $batch = [
+          'title' => $this->t('Importing menu links...'),
+          'operations' => [
+            [
+              '\Drupal\structure_sync\Controller\MenuLinksController::importMenuLinksSafe',
+              [$menus],
             ],
-            'menu_name' => $menuLink['menu_name'],
-            'expanded' => $menuLink['expanded'] === '1' ? TRUE : FALSE,
-            'enabled' => $menuLink['enabled'] === '1' ? TRUE : FALSE,
-            'parent' => $menuLink['parent'],
-            'description' => $menuLink['description'],
-            'weight' => $menuLink['weight'],
-            'langcode' => $menuLink['langcode'],
-          ])->save();
-
-          StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu');
-        }
-
-        StructureSyncHelper::logMessage('Flushing all caches');
-
-        drupal_flush_all_caches();
-
-        StructureSyncHelper::logMessage('Succesfully flushed caches');
-
-        StructureSyncHelper::logMessage('Successfully imported menu links');
-
-        drupal_set_message($this->t('Successfully imported menu links'));
+          ],
+          'finished' => '\Drupal\structure_sync\Controller\MenuLinksController::menuLinksImportFinishedCallback',
+        ];
+        batch_set($batch);
         break;
 
       case 'force':
-        $entities = $this->entityTypeManager->getStorage('menu_link_content')
-          ->loadMultiple();
-        $this->entityTypeManager->getStorage('menu_link_content')
-          ->delete($entities);
-
-        StructureSyncHelper::logMessage('Deleted all (content) menu links');
-
-        foreach ($menus as $menuLink) {
-          MenuLinkContent::create([
-            'title' => $menuLink['title'],
-            'link' => [
-              'uri' => $menuLink['uri'],
-              'title' => $menuLink['link_title'],
+        $batch = [
+          'title' => $this->t('Importing menu links...'),
+          'operations' => [
+            [
+              '\Drupal\structure_sync\Controller\MenuLinksController::deleteMenuLinks',
+              [],
             ],
-            'menu_name' => $menuLink['menu_name'],
-            'expanded' => $menuLink['expanded'] === '1' ? TRUE : FALSE,
-            'enabled' => $menuLink['enabled'] === '1' ? TRUE : FALSE,
-            'parent' => $menuLink['parent'],
-            'description' => $menuLink['description'],
-            'weight' => $menuLink['weight'],
-            'langcode' => $menuLink['langcode'],
-          ])->save();
-
-          StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu');
-        }
-
-        StructureSyncHelper::logMessage('Flushing all caches');
-
-        drupal_flush_all_caches();
-
-        StructureSyncHelper::logMessage('Succesfully flushed caches');
-
-        StructureSyncHelper::logMessage('Successfully imported menu links');
-
-        drupal_set_message($this->t('Successfully imported menu links'));
+            [
+              '\Drupal\structure_sync\Controller\MenuLinksController::importMenuLinksForce',
+              [$menus],
+            ],
+          ],
+          'finished' => '\Drupal\structure_sync\Controller\MenuLinksController::menuLinksImportFinishedCallback',
+        ];
+        batch_set($batch);
         break;
 
       default:
         StructureSyncHelper::logMessage('Style not recognized', 'error');
         break;
     }
+  }
+
+  /**
+   * Function to import menu links safe (only adding what isn't already there).
+   */
+  public static function importMenuLinksSafe($menus, &$context) {
+    $menusFiltered = $menus;
+
+    $entities = StructureSyncHelper::getEntityManager()
+      ->getStorage('menu_link_content')
+      ->loadMultiple();
+
+    foreach ($entities as $entity) {
+      for ($i = 0; $i < count($menus); $i++) {
+        if ($entity->uuid() === $menus[$i]['uuid']) {
+          unset($menusFiltered[$i]);
+        }
+      }
+    }
+
+    foreach ($menusFiltered as $menuLink) {
+      MenuLinkContent::create([
+        'title' => $menuLink['title'],
+        'link' => [
+          'uri' => $menuLink['uri'],
+          'title' => $menuLink['link_title'],
+        ],
+        'menu_name' => $menuLink['menu_name'],
+        'expanded' => $menuLink['expanded'] === '1' ? TRUE : FALSE,
+        'enabled' => $menuLink['enabled'] === '1' ? TRUE : FALSE,
+        'parent' => $menuLink['parent'],
+        'description' => $menuLink['description'],
+        'weight' => $menuLink['weight'],
+        'langcode' => $menuLink['langcode'],
+        'uuid' => $menuLink['uuid'],
+      ])->save();
+
+      StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu');
+    }
+
+    StructureSyncHelper::logMessage('Flushing all caches');
+
+    drupal_flush_all_caches();
+
+    StructureSyncHelper::logMessage('Succesfully flushed caches');
+  }
+
+  /**
+   * Function to delete all taxonomy terms.
+   */
+  public static function deleteMenuLinks(&$context) {
+    $entities = StructureSyncHelper::getEntityManager()
+      ->getStorage('menu_link_content')
+      ->loadMultiple();
+    StructureSyncHelper::getEntityManager()
+      ->getStorage('menu_link_content')
+      ->delete($entities);
+
+    StructureSyncHelper::logMessage('Deleted all (content) menu links');
+  }
+
+  /**
+   * Function to import (create) all menu links that need to be imported.
+   */
+  public static function importMenuLinksForce($menus, &$context) {
+    foreach ($menus as $menuLink) {
+      MenuLinkContent::create([
+        'title' => $menuLink['title'],
+        'link' => [
+          'uri' => $menuLink['uri'],
+          'title' => $menuLink['link_title'],
+        ],
+        'menu_name' => $menuLink['menu_name'],
+        'expanded' => $menuLink['expanded'] === '1' ? TRUE : FALSE,
+        'enabled' => $menuLink['enabled'] === '1' ? TRUE : FALSE,
+        'parent' => $menuLink['parent'],
+        'description' => $menuLink['description'],
+        'weight' => $menuLink['weight'],
+        'langcode' => $menuLink['langcode'],
+        'uuid' => $menuLink['uuid'],
+      ])->save();
+
+      StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu');
+    }
+
+    StructureSyncHelper::logMessage('Flushing all caches');
+
+    drupal_flush_all_caches();
+
+    StructureSyncHelper::logMessage('Succesfully flushed caches');
+  }
+
+  /**
+   * Function that signals that the import of menu links has finished.
+   */
+  public static function menuLinksImportFinishedCallback($success, $results, $operations) {
+    StructureSyncHelper::logMessage('Successfully imported menu links');
+
+    drupal_set_message(t('Successfully imported menu links'));
   }
 
 }
