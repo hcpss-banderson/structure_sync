@@ -151,224 +151,44 @@ class TaxonomiesController extends ControllerBase {
     // Import the taxonomies with the chosen style of importing.
     switch ($style) {
       case 'full':
-        $uuidsInConfig = [];
-        foreach ($taxonomies as $voc) {
-          foreach ($voc as $taxonomy) {
-            $uuidsInConfig[] = $taxonomy['uuid'];
-          }
-        }
-
-        $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
-        $query->condition('uuid', $uuidsInConfig, 'NOT IN');
-        $tids = $query->execute();
-        $controller = $this->entityTypeManager()
-          ->getStorage('taxonomy_term');
-        $entities = $controller->loadMultiple($tids);
-        $controller->delete($entities);
-
-        StructureSyncHelper::logMessage('Deleted taxonomies that were not in config');
-
-        $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
-        $query->condition('uuid', $uuidsInConfig, 'IN');
-        $tids = $query->execute();
-        $controller = $this->entityTypeManager()
-          ->getStorage('taxonomy_term');
-        $entities = $controller->loadMultiple($tids);
-
-        $tidsDone = [];
-        $tidsLeft = [];
-        $newTids = [];
-        $firstRun = TRUE;
-        while ($firstRun || count($tidsLeft) > 0) {
-          foreach ($taxonomies as $vid => $vocabulary) {
-            foreach ($vocabulary as $taxonomy) {
-              $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
-              $query->condition('uuid', $uuidsInConfig, 'IN');
-              $tids = $query->execute();
-
-              if (!in_array($taxonomy['tid'], $tidsDone) && ($taxonomy['parent'] === '0' || in_array($taxonomy['parent'], $tidsDone))) {
-                if (!in_array($taxonomy['tid'], $tidsDone)) {
-                  $parent = $taxonomy['parent'];
-                  if (isset($newTids[$taxonomy['parent']])) {
-                    $parent = $newTids[$taxonomy['parent']];
-                  }
-
-                  if (count($tids) <= 0) {
-                    Term::create([
-                      'vid' => $vid,
-                      'langcode' => $taxonomy['langcode'],
-                      'name' => $taxonomy['name'],
-                      'description' => [
-                        'value' => $taxonomy['description__value'],
-                        'format' => $taxonomy['description__format'],
-                      ],
-                      'weight' => $taxonomy['weight'],
-                      'parent' => [$parent],
-                    ])->save();
-                  }
-                  else {
-                    foreach ($entities as $entity) {
-                      if ($taxonomy['uuid'] === $entity->uuid()) {
-                        $term = Term::load($entity->getEntityTypeId());
-                        if (!empty($term)) {
-                          $term->parent = [$parent];
-
-                          $term
-                            ->setName($taxonomy['name'])
-                            ->setDescription($taxonomy['description__value'])
-                            ->setFormat($taxonomy['description__format'])
-                            ->setWeight($taxonomy['weight'])
-                            ->save();
-                        }
-                      }
-                    }
-                  }
-
-                  $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
-                  $query->condition('vid', $vid);
-                  $query->condition('name', $taxonomy['name']);
-                  $tids = $query->execute();
-                  if (count($tids) > 0) {
-                    $terms = Term::loadMultiple($tids);
-                  }
-
-                  if (isset($terms) && count($terms) > 0) {
-                    reset($terms);
-                    $newTid = key($terms);
-                    $newTids[$taxonomy['tid']] = $newTid;
-                  }
-
-                  $tidsDone[] = $taxonomy['tid'];
-
-                  if (in_array($taxonomy['tid'], $tidsLeft)) {
-                    unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
-                  }
-
-                  StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
-                }
-              }
-              else {
-                if (!in_array($taxonomy['tid'], $tidsLeft)) {
-                  $tidsLeft[] = $taxonomy['tid'];
-                }
-              }
-            }
-          }
-
-          $firstRun = FALSE;
-        }
-
-        StructureSyncHelper::logMessage('Flushing all caches');
-
-        drupal_flush_all_caches();
-
-        StructureSyncHelper::logMessage('Succesfully flushed caches');
-
-        StructureSyncHelper::logMessage('Successfully imported taxonomies');
-
-        drupal_set_message($this->t('Successfully imported taxonomies'));
+        $batch = [
+          'title' => t('Importing taxonomies...'),
+          'operations' => [
+            [
+              '\Drupal\structure_sync\Controller\TaxonomiesController::deleteDeletedTaxonomies',
+              [$taxonomies]
+            ],
+            [
+              '\Drupal\structure_sync\Controller\TaxonomiesController::importTaxonomiesFull',
+              [$taxonomies]
+            ],
+          ],
+          'finished' => '\Drupal\structure_sync\Controller\TaxonomiesController::taxonomiesImportFinishedCallback',
+        ];
+        batch_set($batch);
         break;
 
       case 'safe':
-        $tidsDone = [];
-        $tidsLeft = [];
-        $newTids = [];
-        $firstRun = TRUE;
-        while ($firstRun || count($tidsLeft) > 0) {
-          foreach ($taxonomies as $vid => $vocabulary) {
-            foreach ($vocabulary as $taxonomy) {
-              $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
-              $query->condition('vid', $vid);
-              $query->condition('name', $taxonomy['name']);
-              $tids = $query->execute();
-
-              if (count($tids) <= 0) {
-                if (!in_array($taxonomy['tid'], $tidsDone) && ($taxonomy['parent'] === '0' || in_array($taxonomy['parent'], $tidsDone))) {
-                  if (!in_array($taxonomy['tid'], $tidsDone)) {
-                    $parent = $taxonomy['parent'];
-                    if (isset($newTids[$taxonomy['parent']])) {
-                      $parent = $newTids[$taxonomy['parent']];
-                    }
-
-                    Term::create([
-                      'vid' => $vid,
-                      'langcode' => $taxonomy['langcode'],
-                      'name' => $taxonomy['name'],
-                      'description' => [
-                        'value' => $taxonomy['description__value'],
-                        'format' => $taxonomy['description__format'],
-                      ],
-                      'weight' => $taxonomy['weight'],
-                      'parent' => [$parent],
-                      'uuid' => $taxonomy['uuid'],
-                    ])->save();
-
-                    $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
-                    $query->condition('vid', $vid);
-                    $query->condition('name', $taxonomy['name']);
-                    $tids = $query->execute();
-                    if (count($tids) > 0) {
-                      $terms = Term::loadMultiple($tids);
-                    }
-
-                    if (isset($terms) && count($terms) > 0) {
-                      reset($terms);
-                      $newTid = key($terms);
-                      $newTids[$taxonomy['tid']] = $newTid;
-                    }
-
-                    $tidsDone[] = $taxonomy['tid'];
-
-                    if (in_array($taxonomy['tid'], $tidsLeft)) {
-                      unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
-                    }
-
-                    StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
-                  }
-                }
-                else {
-                  if (!in_array($taxonomy['tid'], $tidsLeft)) {
-                    $tidsLeft[] = $taxonomy['tid'];
-                  }
-                }
-              }
-              elseif (!in_array($taxonomy['tid'], $tidsDone)) {
-                $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
-                $query->condition('vid', $vid);
-                $query->condition('name', $taxonomy['name']);
-                $tids = $query->execute();
-                if (count($tids) > 0) {
-                  $terms = Term::loadMultiple($tids);
-                }
-
-                if (isset($terms) && count($terms) > 0) {
-                  reset($terms);
-                  $newTid = key($terms);
-                  $newTids[$taxonomy['tid']] = $newTid;
-                  $tidsDone[] = $taxonomy['tid'];
-                }
-              }
-            }
-          }
-
-          $firstRun = FALSE;
-        }
-
-        StructureSyncHelper::logMessage('Successfully imported taxonomies');
-
-        drupal_set_message($this->t('Successfully imported taxonomies'));
+        $batch = [
+          'title' => t('Importing taxonomies...'),
+          'operations' => [
+            [
+              '\Drupal\structure_sync\Controller\TaxonomiesController::importTaxonomiesSafe',
+              [$taxonomies]
+            ],
+          ],
+          'finished' => '\Drupal\structure_sync\Controller\TaxonomiesController::taxonomiesImportFinishedCallback',
+        ];
+        batch_set($batch);
         break;
 
       case 'force':
-        $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
-        $tids = $query->execute();
-
         $batch = [
           'title' => t('Importing taxonomies...'),
           'operations' => [
             [
               '\Drupal\structure_sync\Controller\TaxonomiesController::deleteTaxonomies',
-              [$tids]
+              []
             ],
             [
               '\Drupal\structure_sync\Controller\TaxonomiesController::importTaxonomiesForce',
@@ -386,7 +206,239 @@ class TaxonomiesController extends ControllerBase {
     }
   }
 
-  public static function deleteTaxonomies ($tids) {
+  public static function deleteDeletedTaxonomies ($taxonomies, &$context) {
+    $uuidsInConfig = [];
+    foreach ($taxonomies as $voc) {
+      foreach ($voc as $taxonomy) {
+        $uuidsInConfig[] = $taxonomy['uuid'];
+      }
+    }
+
+    $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
+    $query->condition('uuid', $uuidsInConfig, 'NOT IN');
+    $tids = $query->execute();
+    $controller = StructureSyncHelper::getEntityManager()
+      ->getStorage('taxonomy_term');
+    $entities = $controller->loadMultiple($tids);
+    $controller->delete($entities);
+
+    StructureSyncHelper::logMessage('Deleted taxonomies that were not in config');
+  }
+
+  public static function importTaxonomiesFull ($taxonomies, &$context) {
+    $uuidsInConfig = [];
+    foreach ($taxonomies as $voc) {
+      foreach ($voc as $taxonomy) {
+        $uuidsInConfig[] = $taxonomy['uuid'];
+      }
+    }
+
+    $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
+    $query->condition('uuid', $uuidsInConfig, 'IN');
+    $tids = $query->execute();
+    $controller = StructureSyncHelper::getEntityManager()
+      ->getStorage('taxonomy_term');
+    $entities = $controller->loadMultiple($tids);
+
+    $tidsDone = [];
+    $tidsLeft = [];
+    $newTids = [];
+    $firstRun = TRUE;
+    $context['sandbox']['max'] = count($taxonomies);
+    $context['sandbox']['progress'] = 0;
+    while ($firstRun || count($tidsLeft) > 0) {
+      foreach ($taxonomies as $vid => $vocabulary) {
+        foreach ($vocabulary as $taxonomy) {
+          $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
+          $query->condition('uuid', $uuidsInConfig, 'IN');
+          $tids = $query->execute();
+
+          if (!in_array($taxonomy['tid'], $tidsDone) && ($taxonomy['parent'] === '0' || in_array($taxonomy['parent'], $tidsDone))) {
+            if (!in_array($taxonomy['tid'], $tidsDone)) {
+              $parent = $taxonomy['parent'];
+              if (isset($newTids[$taxonomy['parent']])) {
+                $parent = $newTids[$taxonomy['parent']];
+              }
+
+              if (count($tids) <= 0) {
+                Term::create([
+                  'vid' => $vid,
+                  'langcode' => $taxonomy['langcode'],
+                  'name' => $taxonomy['name'],
+                  'description' => [
+                    'value' => $taxonomy['description__value'],
+                    'format' => $taxonomy['description__format'],
+                  ],
+                  'weight' => $taxonomy['weight'],
+                  'parent' => [$parent],
+                ])->save();
+              }
+              else {
+                foreach ($entities as $entity) {
+                  if ($taxonomy['uuid'] === $entity->uuid()) {
+                    $term = Term::load($entity->id());
+                    if (!empty($term)) {
+                      $term->parent = [$parent];
+
+                      $term
+                        ->setName($taxonomy['name'])
+                        ->setDescription($taxonomy['description__value'])
+                        ->setFormat($taxonomy['description__format'])
+                        ->setWeight($taxonomy['weight'])
+                        ->save();
+                    }
+                  }
+                }
+              }
+
+              $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
+              $query->condition('vid', $vid);
+              $query->condition('name', $taxonomy['name']);
+              $tids = $query->execute();
+              if (count($tids) > 0) {
+                $terms = Term::loadMultiple($tids);
+              }
+
+              if (isset($terms) && count($terms) > 0) {
+                reset($terms);
+                $newTid = key($terms);
+                $newTids[$taxonomy['tid']] = $newTid;
+              }
+
+              $tidsDone[] = $taxonomy['tid'];
+
+              if (in_array($taxonomy['tid'], $tidsLeft)) {
+                unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
+              }
+
+              StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+
+              $context['sandbox']['progress']++;
+              if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+                $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+              }
+            }
+          }
+          else {
+            if (!in_array($taxonomy['tid'], $tidsLeft)) {
+              $tidsLeft[] = $taxonomy['tid'];
+            }
+          }
+        }
+      }
+
+      $firstRun = FALSE;
+    }
+
+    StructureSyncHelper::logMessage('Flushing all caches');
+
+    drupal_flush_all_caches();
+
+    StructureSyncHelper::logMessage('Succesfully flushed caches');
+
+    $context['finished'] = 1;
+  }
+
+  public static function importTaxonomiesSafe ($taxonomies, &$context) {
+    $tidsDone = [];
+    $tidsLeft = [];
+    $newTids = [];
+    $firstRun = TRUE;
+    $context['sandbox']['max'] = count($taxonomies);
+    $context['sandbox']['progress'] = 0;
+    while ($firstRun || count($tidsLeft) > 0) {
+      foreach ($taxonomies as $vid => $vocabulary) {
+        foreach ($vocabulary as $taxonomy) {
+          $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
+          $query->condition('vid', $vid);
+          $query->condition('name', $taxonomy['name']);
+          $tids = $query->execute();
+
+          if (count($tids) <= 0) {
+            if (!in_array($taxonomy['tid'], $tidsDone) && ($taxonomy['parent'] === '0' || in_array($taxonomy['parent'], $tidsDone))) {
+              if (!in_array($taxonomy['tid'], $tidsDone)) {
+                $parent = $taxonomy['parent'];
+                if (isset($newTids[$taxonomy['parent']])) {
+                  $parent = $newTids[$taxonomy['parent']];
+                }
+
+                $context['message'] = t('Importing @taxonomy', ['@taxonomy' => $taxonomy['name']]);
+
+                Term::create([
+                  'vid' => $vid,
+                  'langcode' => $taxonomy['langcode'],
+                  'name' => $taxonomy['name'],
+                  'description' => [
+                    'value' => $taxonomy['description__value'],
+                    'format' => $taxonomy['description__format'],
+                  ],
+                  'weight' => $taxonomy['weight'],
+                  'parent' => [$parent],
+                  'uuid' => $taxonomy['uuid'],
+                ])->save();
+
+                $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
+                $query->condition('vid', $vid);
+                $query->condition('name', $taxonomy['name']);
+                $tids = $query->execute();
+                if (count($tids) > 0) {
+                  $terms = Term::loadMultiple($tids);
+                }
+
+                if (isset($terms) && count($terms) > 0) {
+                  reset($terms);
+                  $newTid = key($terms);
+                  $newTids[$taxonomy['tid']] = $newTid;
+                }
+
+                $tidsDone[] = $taxonomy['tid'];
+
+                if (in_array($taxonomy['tid'], $tidsLeft)) {
+                  unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
+                }
+
+                StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+
+                $context['sandbox']['progress']++;
+                if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+                  $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+                }
+              }
+            }
+            else {
+              if (!in_array($taxonomy['tid'], $tidsLeft)) {
+                $tidsLeft[] = $taxonomy['tid'];
+              }
+            }
+          }
+          elseif (!in_array($taxonomy['tid'], $tidsDone)) {
+            $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
+            $query->condition('vid', $vid);
+            $query->condition('name', $taxonomy['name']);
+            $tids = $query->execute();
+            if (count($tids) > 0) {
+              $terms = Term::loadMultiple($tids);
+            }
+
+            if (isset($terms) && count($terms) > 0) {
+              reset($terms);
+              $newTid = key($terms);
+              $newTids[$taxonomy['tid']] = $newTid;
+              $tidsDone[] = $taxonomy['tid'];
+            }
+          }
+        }
+      }
+
+      $firstRun = FALSE;
+    }
+
+    $context['finished'] = 1;
+  }
+
+  public static function deleteTaxonomies () {
+    $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
+    $tids = $query->execute();
     $controller = StructureSyncHelper::getEntityManager()
       ->getStorage('taxonomy_term');
     $entities = $controller->loadMultiple($tids);
