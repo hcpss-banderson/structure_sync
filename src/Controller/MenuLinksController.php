@@ -123,186 +123,24 @@ class MenuLinksController extends ControllerBase {
       $menus = $menusConfig;
     }
 
-    $query = \Drupal::database();
-
     // Import the menu links with the chosen style of importing.
     switch ($style) {
       case 'full':
-        $queryCheck = $query->select('menu_link_content', 'mlc');
-        $queryCheck->fields('mlc', ['uuid']);
-        $uuids = $queryCheck->execute()->fetchAll();
-        $uuids = array_column($uuids, 'uuid');
-
-        $newUuids = array_map(function ($menu) {
-          return $menu['uuid'];
-        }, $menus);
-
-        foreach ($menus as $menu) {
-          $newUuids[] = $menu['uuid'];
-        }
-
-        $uuidsToDelete = [];
-        foreach ($uuids as $uuid) {
-          if (!in_array($uuid, $newUuids)) {
-            $uuidsToDelete[] = $uuid;
-          }
-        }
-
-        if (count($uuidsToDelete) > 0) {
-          $queryIds = \Drupal::database()
-            ->select('menu_link_content', 'mlc')
-            ->fields('mlc', ['id'])
-            ->condition('uuid', $uuidsToDelete, 'IN');
-          $idsToDelete = $queryIds->execute()->fetchAll();
-          $idsToDelete = array_column($idsToDelete, 'id');
-        }
-
-        $uuidsToDeletePrefixed = array_map(function ($uuid) {
-          return "menu_link_content:$uuid";
-        }, $uuidsToDelete);
-
-        if (isset($idsToDelete) && count($idsToDelete) > 0) {
-          $query->delete('menu_link_content')
-            ->condition('id', $idsToDelete, 'IN')
-            ->execute();
-          $query->delete('menu_link_content_data')
-            ->condition('id', $idsToDelete, 'IN')
-            ->execute();
-          $query->delete('menu_tree')
-            ->condition('id', $uuidsToDeletePrefixed, 'IN')
-            ->execute();
-        }
-
-        foreach ($menus as $menu) {
-          if (!in_array($menu['uuid'], $uuids)) {
-            $id = $query->insert('menu_link_content')->fields([
-              'bundle' => $menu['bundle'],
-              'uuid' => $menu['uuid'],
-              'langcode' => $menu['langcode'],
-            ])->execute();
-            $query->insert('menu_link_content_data')->fields([
-              'id' => $id,
-              'bundle' => $menu['bundle'],
-              'langcode' => $menu['langcode'],
-              'title' => $menu['mlcd_title'],
-              'description' => $menu['mlcd_description'],
-              'menu_name' => $menu['menu_name'],
-              'link__uri' => $menu['link__uri'],
-              'link__title' => $menu['link__title'],
-              'link__options' => $menu['link__options'],
-              'external' => $menu['external'],
-              'rediscover' => $menu['rediscover'],
-              'weight' => $menu['mlcd_weight'],
-              'expanded' => $menu['mlcd_expanded'],
-              'enabled' => $menu['mlcd_enabled'],
-              'parent' => $menu['mlcd_parent'],
-              'changed' => $menu['changed'],
-              'default_langcode' => $menu['default_langcode'],
-            ])->execute();
-            $query->insert('menu_tree')->fields([
-              'menu_name' => $menu['menu_name'],
-              'id' => $menu['id'],
-              'parent' => $menu['parent'],
-              'route_name' => $menu['route_name'],
-              'route_param_key' => $menu['route_param_key'],
-              'route_parameters' => $menu['route_parameters'],
-              'url' => $menu['url'],
-              'title' => $menu['title'],
-              'description' => $menu['description'],
-              'class' => $menu['class'],
-              'options' => $menu['options'],
-              'provider' => $menu['provider'],
-              'enabled' => $menu['enabled'],
-              'discovered' => $menu['discovered'],
-              'expanded' => $menu['expanded'],
-              'weight' => $menu['weight'],
-              'metadata' => $menu['metadata'],
-              'has_children' => $menu['has_children'],
-              'depth' => $menu['depth'],
-              'p1' => $menu['p1'],
-              'p2' => $menu['p2'],
-              'p3' => $menu['p3'],
-              'p4' => $menu['p4'],
-              'p5' => $menu['p5'],
-              'p6' => $menu['p6'],
-              'p7' => $menu['p7'],
-              'p8' => $menu['p8'],
-              'p9' => $menu['p9'],
-              'form_class' => $menu['form_class'],
-            ])->execute();
-          }
-          else {
-            $query->update('menu_link_content')->fields([
-              'bundle' => $menu['bundle'],
-              'uuid' => $menu['uuid'],
-              'langcode' => $menu['langcode'],
-            ])->condition('uuid', $menu['uuid'])->execute();
-            $connection = Database::getConnection();
-            $idQuery = $connection->select('menu_link_content', 'mlc')
-              ->fields('mlc', ['id'])->condition('mlc.uuid', $menu['uuid']);
-            $id = $idQuery->execute()->fetchField();
-            $query->update('menu_link_content_data')->fields([
-              'bundle' => $menu['bundle'],
-              'langcode' => $menu['langcode'],
-              'title' => $menu['mlcd_title'],
-              'description' => $menu['mlcd_description'],
-              'menu_name' => $menu['menu_name'],
-              'link__uri' => $menu['link__uri'],
-              'link__title' => $menu['link__title'],
-              'link__options' => $menu['link__options'],
-              'external' => $menu['external'],
-              'rediscover' => $menu['rediscover'],
-              'weight' => $menu['mlcd_weight'],
-              'expanded' => $menu['mlcd_expanded'],
-              'enabled' => $menu['mlcd_enabled'],
-              'parent' => $menu['mlcd_parent'],
-              'changed' => $menu['changed'],
-              'default_langcode' => $menu['default_langcode'],
-            ])->condition('id', $id)->execute();
-            $query->update('menu_tree')->fields([
-              'menu_name' => $menu['menu_name'],
-              'parent' => $menu['parent'],
-              'route_name' => $menu['route_name'],
-              'route_param_key' => $menu['route_param_key'],
-              'route_parameters' => $menu['route_parameters'],
-              'url' => $menu['url'],
-              'title' => $menu['title'],
-              'description' => $menu['description'],
-              'class' => $menu['class'],
-              'options' => $menu['options'],
-              'provider' => $menu['provider'],
-              'enabled' => $menu['enabled'],
-              'discovered' => $menu['discovered'],
-              'expanded' => $menu['expanded'],
-              'weight' => $menu['weight'],
-              'metadata' => $menu['metadata'],
-              'has_children' => $menu['has_children'],
-              'depth' => $menu['depth'],
-              'p1' => $menu['p1'],
-              'p2' => $menu['p2'],
-              'p3' => $menu['p3'],
-              'p4' => $menu['p4'],
-              'p5' => $menu['p5'],
-              'p6' => $menu['p6'],
-              'p7' => $menu['p7'],
-              'p8' => $menu['p8'],
-              'p9' => $menu['p9'],
-              'form_class' => $menu['form_class'],
-            ])->condition('id', $menu['id'])->execute();
-          }
-
-          StructureSyncHelper::logMessage('Imported "' . $menu['mlcd_title'] . '" into "' . $menu['menu_name'] . '" menu');
-        }
-
-        StructureSyncHelper::logMessage('Flushing all caches');
-
-        drupal_flush_all_caches();
-
-        StructureSyncHelper::logMessage('Succesfully flushed caches');
-
-        StructureSyncHelper::logMessage('Successfully imported menu links');
-
-        drupal_set_message($this->t('Successfully imported menu links'));
+        $batch = [
+          'title' => $this->t('Importing menu links...'),
+          'operations' => [
+            [
+              '\Drupal\structure_sync\Controller\MenuLinksController::deleteDeletedMenuLinks',
+              [$menus],
+            ],
+            [
+              '\Drupal\structure_sync\Controller\MenuLinksController::importMenuLinksFull',
+              [$menus],
+            ],
+          ],
+          'finished' => '\Drupal\structure_sync\Controller\MenuLinksController::menuLinksImportFinishedCallback',
+        ];
+        batch_set($batch);
         break;
 
       case 'safe':
@@ -341,6 +179,140 @@ class MenuLinksController extends ControllerBase {
         StructureSyncHelper::logMessage('Style not recognized', 'error');
         break;
     }
+  }
+
+  /**
+   * Function to delete the menu links that should be removed in this import.
+   */
+  public static function deleteDeletedMenuLinks($menus, &$context) {
+    $uuidsInConfig = [];
+    foreach ($menus as $menuLink) {
+      $uuidsInConfig[] = $menuLink['uuid'];
+    }
+
+    $query = StructureSyncHelper::getEntityQuery('menu_link_content');
+    $query->condition('uuid', $uuidsInConfig, 'NOT IN');
+    $ids = $query->execute();
+    $controller = StructureSyncHelper::getEntityManager()
+      ->getStorage('menu_link_content');
+    $entities = $controller->loadMultiple($ids);
+    $controller->delete($entities);
+
+    StructureSyncHelper::logMessage('Deleted menu links that were not in config');
+  }
+
+  /**
+   * Function to fully import the menu links.
+   *
+   * Basically a safe import with update actions for already existing menu
+   * links.
+   */
+  public static function importMenuLinksFull($menus, &$context) {
+    $uuidsInConfig = [];
+    foreach ($menus as $menuLink) {
+      $uuidsInConfig[] = $menuLink['uuid'];
+    }
+
+    $query = StructureSyncHelper::getEntityQuery('menu_link_content');
+    $query->condition('uuid', $uuidsInConfig, 'IN');
+    $ids = $query->execute();
+    $controller = StructureSyncHelper::getEntityManager()
+      ->getStorage('menu_link_content');
+    $entities = $controller->loadMultiple($ids);
+
+    $parents = array_column($menus, 'parent');
+    foreach ($parents as &$parent) {
+      if (($pos = strpos($parent, ":")) !== FALSE) {
+        $parent = substr($parent, $pos + 1);
+      }
+    }
+
+    $idsDone = [];
+    $idsLeft = [];
+    $newIds = [];
+    $firstRun = TRUE;
+    $context['sandbox']['max'] = count($menus);
+    $context['sandbox']['progress'] = 0;
+    while ($firstRun || count($idsLeft) > 0) {
+      foreach ($menus as $menuLink) {
+        $query = StructureSyncHelper::getEntityQuery('menu_link_content');
+        $query->condition('uuid', $uuidsInConfig, 'IN');
+        $ids = $query->execute();
+
+        if (!in_array($menuLink['uuid'], $idsDone)
+          && ($menuLink['parent'] === NULL
+            || !in_array($menuLink['parent'], $parents)
+            || in_array($menuLink['parent'], $idsDone))
+        ) {
+          if (count($ids) <= 0) {
+            MenuLinkContent::create([
+              'title' => $menuLink['title'],
+              'link' => [
+                'uri' => $menuLink['uri'],
+                'title' => $menuLink['link_title'],
+              ],
+              'menu_name' => $menuLink['menu_name'],
+              'expanded' => $menuLink['expanded'] === '1' ? TRUE : FALSE,
+              'enabled' => $menuLink['enabled'] === '1' ? TRUE : FALSE,
+              'parent' => $menuLink['parent'],
+              'description' => $menuLink['description'],
+              'weight' => $menuLink['weight'],
+              'langcode' => $menuLink['langcode'],
+              'uuid' => $menuLink['uuid'],
+            ])->save();
+          }
+          else {
+            foreach ($entities as $entity) {
+              if ($menuLink['uuid'] === $entity->uuid()) {
+                $customMenuLink = MenuLinkContent::load($entity->id());
+                if (!empty($customMenuLink)) {
+                  $customMenuLink
+                    ->set('title', $menuLink['title'])
+                    ->set('link', [
+                      'uri' => $menuLink['uri'],
+                      'title' => $menuLink['link_title'],
+                    ])
+                    ->set('expanded', $menuLink['expanded'] === '1' ? TRUE : FALSE)
+                    ->set('enabled', $menuLink['enabled'] === '1' ? TRUE : FALSE)
+                    ->set('parent', $menuLink['parent'])
+                    ->set('description', $menuLink['description'])
+                    ->set('weight', $menuLink['weight'])
+                    ->save();
+                }
+              }
+            }
+          }
+
+          $idsDone[] = $menuLink['uuid'];
+
+          if (in_array($menuLink['uuid'], $idsLeft)) {
+            unset($idsLeft[array_search($menuLink['uuid'], $idsLeft)]);
+          }
+
+          StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into ' . $menuLink['menu_name']);
+
+          $context['sandbox']['progress']++;
+          if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+            $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+          }
+        }
+        else {
+          if (!in_array($menuLink['uuid'], $idsLeft)) {
+            $idsLeft[] = $menuLink['uuid'];
+          }
+        }
+      }
+
+      $firstRun = FALSE;
+    }
+
+    StructureSyncHelper::logMessage('Flushing all caches');
+
+    drupal_flush_all_caches();
+
+    StructureSyncHelper::logMessage('Succesfully flushed caches');
+
+    $context['finished'] = 1;
   }
 
   /**

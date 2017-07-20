@@ -263,69 +263,67 @@ class TaxonomiesController extends ControllerBase {
           $tids = $query->execute();
 
           if (!in_array($taxonomy['tid'], $tidsDone) && ($taxonomy['parent'] === '0' || in_array($taxonomy['parent'], $tidsDone))) {
-            if (!in_array($taxonomy['tid'], $tidsDone)) {
-              $parent = $taxonomy['parent'];
-              if (isset($newTids[$taxonomy['parent']])) {
-                $parent = $newTids[$taxonomy['parent']];
-              }
+            $parent = $taxonomy['parent'];
+            if (isset($newTids[$taxonomy['parent']])) {
+              $parent = $newTids[$taxonomy['parent']];
+            }
 
-              if (count($tids) <= 0) {
-                Term::create([
-                  'vid' => $vid,
-                  'langcode' => $taxonomy['langcode'],
-                  'name' => $taxonomy['name'],
-                  'description' => [
-                    'value' => $taxonomy['description__value'],
-                    'format' => $taxonomy['description__format'],
-                  ],
-                  'weight' => $taxonomy['weight'],
-                  'parent' => [$parent],
-                ])->save();
-              }
-              else {
-                foreach ($entities as $entity) {
-                  if ($taxonomy['uuid'] === $entity->uuid()) {
-                    $term = Term::load($entity->id());
-                    if (!empty($term)) {
-                      $term->parent = [$parent];
+            if (count($tids) <= 0) {
+              Term::create([
+                'vid' => $vid,
+                'langcode' => $taxonomy['langcode'],
+                'name' => $taxonomy['name'],
+                'description' => [
+                  'value' => $taxonomy['description__value'],
+                  'format' => $taxonomy['description__format'],
+                ],
+                'weight' => $taxonomy['weight'],
+                'parent' => [$parent],
+              ])->save();
+            }
+            else {
+              foreach ($entities as $entity) {
+                if ($taxonomy['uuid'] === $entity->uuid()) {
+                  $term = Term::load($entity->id());
+                  if (!empty($term)) {
+                    $term->parent = [$parent];
 
-                      $term
-                        ->setName($taxonomy['name'])
-                        ->setDescription($taxonomy['description__value'])
-                        ->setFormat($taxonomy['description__format'])
-                        ->setWeight($taxonomy['weight'])
-                        ->save();
-                    }
+                    $term
+                      ->setName($taxonomy['name'])
+                      ->setDescription($taxonomy['description__value'])
+                      ->setFormat($taxonomy['description__format'])
+                      ->setWeight($taxonomy['weight'])
+                      ->save();
                   }
                 }
               }
+            }
 
-              $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
-              $query->condition('vid', $vid);
-              $query->condition('name', $taxonomy['name']);
-              $tids = $query->execute();
-              if (count($tids) > 0) {
-                $terms = Term::loadMultiple($tids);
-              }
+            $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
+            $query->condition('vid', $vid);
+            $query->condition('name', $taxonomy['name']);
+            $tids = $query->execute();
+            if (count($tids) > 0) {
+              $terms = Term::loadMultiple($tids);
+            }
 
-              if (isset($terms) && count($terms) > 0) {
-                reset($terms);
-                $newTid = key($terms);
-                $newTids[$taxonomy['tid']] = $newTid;
-              }
+            if (isset($terms) && count($terms) > 0) {
+              reset($terms);
+              $newTid = key($terms);
+              $newTids[$taxonomy['tid']] = $newTid;
+            }
 
-              $tidsDone[] = $taxonomy['tid'];
+            $tidsDone[] = $taxonomy['tid'];
 
-              if (in_array($taxonomy['tid'], $tidsLeft)) {
-                unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
-              }
+            if (in_array($taxonomy['tid'], $tidsLeft)) {
+              unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
+            }
 
-              StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
+            StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
 
-              $context['sandbox']['progress']++;
-              if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
-                $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
-              }
+            $context['sandbox']['progress']++;
+            if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+              $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
             }
           }
           else {
