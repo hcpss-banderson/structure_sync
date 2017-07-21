@@ -259,7 +259,7 @@ class TaxonomiesController extends ControllerBase {
       foreach ($taxonomies as $vid => $vocabulary) {
         foreach ($vocabulary as $taxonomy) {
           $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
-          $query->condition('uuid', $uuidsInConfig, 'IN');
+          $query->condition('uuid', $taxonomy['uuid']);
           $tids = $query->execute();
 
           if (!in_array($taxonomy['tid'], $tidsDone) && ($taxonomy['parent'] === '0' || in_array($taxonomy['parent'], $tidsDone))) {
