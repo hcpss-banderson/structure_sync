@@ -222,28 +222,40 @@ class MenuLinksController extends ControllerBase {
 
     $parents = array_column($menus, 'parent');
     foreach ($parents as &$parent) {
-      if (($pos = strpos($parent, ":")) !== FALSE) {
-        $parent = substr($parent, $pos + 1);
+      if (!is_null($parent)) {
+        if (($pos = strpos($parent, ":")) !== FALSE) {
+          $parent = substr($parent, $pos + 1);
+        }
+        else {
+          $parent = NULL;
+        }
       }
     }
 
     $idsDone = [];
     $idsLeft = [];
-    $newIds = [];
     $firstRun = TRUE;
     $context['sandbox']['max'] = count($menus);
     $context['sandbox']['progress'] = 0;
     while ($firstRun || count($idsLeft) > 0) {
       foreach ($menus as $menuLink) {
         $query = StructureSyncHelper::getEntityQuery('menu_link_content');
-        $query->condition('uuid', $uuidsInConfig, 'IN');
+        $query->condition('uuid', $menuLink['uuid']);
         $ids = $query->execute();
+
+        $currentParent = $menuLink['parent'];
+        if (!is_null($currentParent)) {
+          if (($pos = strpos($currentParent, ":")) !== FALSE) {
+            $currentParent = substr($currentParent, $pos + 1);
+          }
+        }
 
         if (!in_array($menuLink['uuid'], $idsDone)
           && ($menuLink['parent'] === NULL
             || !in_array($menuLink['parent'], $parents)
-            || in_array($menuLink['parent'], $idsDone))
+            || in_array($currentParent, $idsDone))
         ) {
+          StructureSyncHelper::logMessage('count ' . count($ids) . ' on ' . $menuLink['title']);
           if (count($ids) <= 0) {
             MenuLinkContent::create([
               'title' => $menuLink['title'],
@@ -279,6 +291,8 @@ class MenuLinksController extends ControllerBase {
                     ->set('weight', $menuLink['weight'])
                     ->save();
                 }
+
+                break;
               }
             }
           }
@@ -286,7 +300,7 @@ class MenuLinksController extends ControllerBase {
           $idsDone[] = $menuLink['uuid'];
 
           if (in_array($menuLink['uuid'], $idsLeft)) {
-            unset($idsLeft[array_search($menuLink['uuid'], $idsLeft)]);
+            unset($idsLeft[$menuLink['uuid']]);
           }
 
           StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into ' . $menuLink['menu_name']);
@@ -297,9 +311,7 @@ class MenuLinksController extends ControllerBase {
           }
         }
         else {
-          if (!in_array($menuLink['uuid'], $idsLeft)) {
-            $idsLeft[] = $menuLink['uuid'];
-          }
+          $idsLeft[$menuLink['uuid']] = $menuLink['uuid'];
         }
       }
 
@@ -310,7 +322,7 @@ class MenuLinksController extends ControllerBase {
 
     drupal_flush_all_caches();
 
-    StructureSyncHelper::logMessage('Succesfully flushed caches');
+    StructureSyncHelper::logMessage('Successfully flushed caches');
 
     $context['finished'] = 1;
   }
@@ -357,7 +369,7 @@ class MenuLinksController extends ControllerBase {
 
     drupal_flush_all_caches();
 
-    StructureSyncHelper::logMessage('Succesfully flushed caches');
+    StructureSyncHelper::logMessage('Successfully flushed caches');
   }
 
   /**
@@ -402,7 +414,7 @@ class MenuLinksController extends ControllerBase {
 
     drupal_flush_all_caches();
 
-    StructureSyncHelper::logMessage('Succesfully flushed caches');
+    StructureSyncHelper::logMessage('Successfully flushed caches');
   }
 
   /**
