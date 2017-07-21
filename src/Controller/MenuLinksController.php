@@ -318,12 +318,6 @@ class MenuLinksController extends ControllerBase {
       $firstRun = FALSE;
     }
 
-    StructureSyncHelper::logMessage('Flushing all caches');
-
-    drupal_flush_all_caches();
-
-    StructureSyncHelper::logMessage('Successfully flushed caches');
-
     $context['finished'] = 1;
   }
 
@@ -364,16 +358,10 @@ class MenuLinksController extends ControllerBase {
 
       StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu');
     }
-
-    StructureSyncHelper::logMessage('Flushing all caches');
-
-    drupal_flush_all_caches();
-
-    StructureSyncHelper::logMessage('Successfully flushed caches');
   }
 
   /**
-   * Function to delete all taxonomy terms.
+   * Function to delete all menu links.
    */
   public static function deleteMenuLinks(&$context) {
     $entities = StructureSyncHelper::getEntityManager()
@@ -409,18 +397,18 @@ class MenuLinksController extends ControllerBase {
 
       StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu');
     }
-
-    StructureSyncHelper::logMessage('Flushing all caches');
-
-    drupal_flush_all_caches();
-
-    StructureSyncHelper::logMessage('Successfully flushed caches');
   }
 
   /**
    * Function that signals that the import of menu links has finished.
    */
   public static function menuLinksImportFinishedCallback($success, $results, $operations) {
+    StructureSyncHelper::logMessage('Flushing all caches');
+
+    drupal_flush_all_caches();
+
+    StructureSyncHelper::logMessage('Successfully flushed caches');
+
     StructureSyncHelper::logMessage('Successfully imported menu links');
 
     drupal_set_message(t('Successfully imported menu links'));
