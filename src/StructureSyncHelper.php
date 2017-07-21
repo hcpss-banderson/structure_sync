@@ -4,6 +4,7 @@ namespace Drupal\structure_sync;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Database\Database;
+use Drupal\structure_sync\Controller\BlocksController;
 use Drupal\structure_sync\Controller\MenuLinksController;
 use Drupal\taxonomy\Entity\Term;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
@@ -27,6 +28,10 @@ class StructureSyncHelper {
    * Function to export custom blocks.
    */
   public static function exportCustomBlocks(array $form = NULL, FormStateInterface $form_state = NULL) {
+    $blocksController = new BlocksController();
+    $blocksController->exportBlocks($form, $form_state);
+    return;
+
     // TODO: Doesn't work yet with custom blocks without content in body.
     StructureSyncHelper::logMessage('Custom blocks export started');
 
