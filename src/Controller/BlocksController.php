@@ -47,10 +47,10 @@ class BlocksController extends ControllerBase {
     if (isset($blockList)) {
       $blocks = [];
 
-      foreach ($blockList as $blockName) {
+      foreach ($blockList as $blockUuid) {
         $blocks = array_merge($this->entityTypeManager
           ->getStorage('block_content')
-          ->loadByProperties(['menu_name' => $blockName]), $blocks);
+          ->loadByProperties(['uuid' => $blockUuid]), $blocks);
       }
     }
     else {
@@ -130,12 +130,12 @@ class BlocksController extends ControllerBase {
           'title' => $this->t('Importing custom blocks...'),
           'operations' => [
             [
-              '\Drupal\structure_sync\Controller\BlocksController::deleteDeletedMenuLinks',
-              [$menus],
+              '\Drupal\structure_sync\Controller\BlocksController::deleteDeletedBlocks',
+              [$blocks],
             ],
             [
-              '\Drupal\structure_sync\Controller\BlocksController::importMenuLinksFull',
-              [$menus],
+              '\Drupal\structure_sync\Controller\BlocksController::importBlocksFull',
+              [$blocks],
             ],
           ],
           'finished' => '\Drupal\structure_sync\Controller\BlocksController::blocksImportFinishedCallback',
@@ -148,8 +148,8 @@ class BlocksController extends ControllerBase {
           'title' => $this->t('Importing custom blocks...'),
           'operations' => [
             [
-              '\Drupal\structure_sync\Controller\BlocksController::importMenuLinksSafe',
-              [$menus],
+              '\Drupal\structure_sync\Controller\BlocksController::importBlocksSafe',
+              [$blocks],
             ],
           ],
           'finished' => '\Drupal\structure_sync\Controller\BlocksController::blocksImportFinishedCallback',
@@ -182,6 +182,134 @@ class BlocksController extends ControllerBase {
   }
 
   /**
+   * Function to delete the custom blocks that should be removed in this import.
+   */
+  public static function deleteDeletedBlocks($blocks, &$context) {
+    $uuidsInConfig = [];
+    foreach ($blocks as $block) {
+      $uuidsInConfig[] = $block['uuid'];
+    }
+
+    $query = StructureSyncHelper::getEntityQuery('block_content');
+    $query->condition('uuid', $uuidsInConfig, 'NOT IN');
+    $ids = $query->execute();
+    $controller = StructureSyncHelper::getEntityManager()
+      ->getStorage('block_content');
+    $entities = $controller->loadMultiple($ids);
+    $controller->delete($entities);
+
+    StructureSyncHelper::logMessage('Deleted custom blocks that were not in config');
+  }
+
+  /**
+   * Function to fully import the custom blocks.
+   *
+   * Basically a safe import with update actions for already existing custom
+   * blocks.
+   */
+  public static function importBlocksFull($blocks, &$context) {
+    $uuidsInConfig = [];
+    foreach ($blocks as $block) {
+      $uuidsInConfig[] = $block['uuid'];
+    }
+
+    $query = StructureSyncHelper::getEntityQuery('block_content');
+    $query->condition('uuid', $uuidsInConfig, 'IN');
+    $ids = $query->execute();
+    $controller = StructureSyncHelper::getEntityManager()
+      ->getStorage('block_content');
+    $entities = $controller->loadMultiple($ids);
+
+    $context['sandbox']['max'] = count($blocks);
+    $context['sandbox']['progress'] = 0;
+    foreach ($blocks as $block) {
+      $query = StructureSyncHelper::getEntityQuery('block_content');
+      $query->condition('uuid', $block['uuid']);
+      $ids = $query->execute();
+
+      if (count($ids) <= 0) {
+        BlockContent::create([
+          'info' => $block['info'],
+          'langcode' => $block['langcode'],
+          'uuid' => $block['uuid'],
+          'type' => $block['bundle'],
+          'body' => [
+            'value' => $block['body_value'],
+            'summary' => $block['body_summary'],
+            'format' => $block['body_format'],
+          ],
+        ])->save();
+
+        StructureSyncHelper::logMessage('Imported "' . $block['info'] . '"');
+      }
+      else {
+        foreach ($entities as $entity) {
+          if ($block['uuid'] === $entity->uuid()) {
+            $customBlock = BlockContent::load($entity->id());
+            if (!empty($customBlock)) {
+              $customBlock
+                ->setInfo($block['info'])
+                ->set('langcode', $block['langcode'])
+                ->set('type', $block['bundle'])
+                ->set('body', [
+                  'value' => $block['body_value'],
+                  'summary' => $block['body_summary'],
+                  'format' => $block['body_format'],
+                ])->save();
+            }
+
+            StructureSyncHelper::logMessage('Updated "' . $block['info'] . '"');
+
+            break;
+          }
+        }
+      }
+
+      $context['sandbox']['progress']++;
+      if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+        $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+      }
+    }
+
+    $context['finished'] = 1;
+  }
+
+  /**
+   * Function to import blocks safely (only adding what isn't already there).
+   */
+  public static function importBlocksSafe($blocks, &$context) {
+    $blocksFiltered = $blocks;
+
+    $entities = StructureSyncHelper::getEntityManager()
+      ->getStorage('block_content')
+      ->loadMultiple();
+
+    foreach ($entities as $entity) {
+      for ($i = 0; $i < count($blocks); $i++) {
+        if ($entity->uuid() === $blocks[$i]['uuid']) {
+          unset($blocksFiltered[$i]);
+        }
+      }
+    }
+
+    foreach ($blocksFiltered as $block) {
+      BlockContent::create([
+        'info' => $block['info'],
+        'langcode' => $block['langcode'],
+        'uuid' => $block['uuid'],
+        'type' => $block['bundle'],
+        'body' => [
+          'value' => $block['body_value'],
+          'summary' => $block['body_summary'],
+          'format' => $block['body_format'],
+        ],
+      ])->save();
+
+      StructureSyncHelper::logMessage('Imported "' . $block['info'] . '"');
+    }
+  }
+
+  /**
    * Function to delete all custom blocks.
    */
   public static function deleteBlocks(&$context) {
@@ -204,7 +332,7 @@ class BlocksController extends ControllerBase {
         'info' => $block['info'],
         'langcode' => $block['langcode'],
         'uuid' => $block['uuid'],
-        'bundle' => $block['bundle'],
+        'type' => $block['bundle'],
         'body' => [
           'value' => $block['body_value'],
           'summary' => $block['body_summary'],

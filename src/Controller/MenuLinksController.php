@@ -255,7 +255,6 @@ class MenuLinksController extends ControllerBase {
             || !in_array($menuLink['parent'], $parents)
             || in_array($currentParent, $idsDone))
         ) {
-          StructureSyncHelper::logMessage('count ' . count($ids) . ' on ' . $menuLink['title']);
           if (count($ids) <= 0) {
             MenuLinkContent::create([
               'title' => $menuLink['title'],
