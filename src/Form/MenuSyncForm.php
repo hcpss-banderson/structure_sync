@@ -81,22 +81,20 @@ class MenuSyncForm extends ConfigFormBase {
       '#submit' => [[$helper, 'exportMenuLinks']],
     ];
 
-    // Get a list of all menus (and their machine names).
-    $menu_list = [];
-    $query = $this->database->select('menu_tree', 'mt')
-      ->fields('mt', ['menu_name']);
-    $query->condition('provider', 'menu_link_content', '=');
-    $menus = $query->execute()->fetchAll();
-    foreach ($menus as $menu) {
-      $menuName = $this->config('system.menu.' . $menu->menu_name)
-        ->get('label');
-      $menu_list[$menu->menu_name] = $menuName;
+    $menuList = [];
+    $entities = StructureSyncHelper::getEntityManager()
+      ->getStorage('menu_link_content')
+      ->loadMultiple();
+    foreach ($entities as $entity) {
+      $menuId = $entity->menu_name->getValue()[0]['value'];
+      $menuName = $this->config('system.menu.' . $menuId)->get('label');
+      $menuList[$menuId] = $menuName;
     }
 
     $form['export']['export_menu_list'] = [
       '#type' => 'checkboxes',
-      '#options' => $menu_list,
-      '#default_value' => array_keys($menu_list),
+      '#options' => $menuList,
+      '#default_value' => array_keys($menuList),
       '#title' => $this->t('Select the menus you would like to export'),
     ];
 

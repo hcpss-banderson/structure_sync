@@ -3,6 +3,7 @@
 namespace Drupal\structure_sync\Form;
 
 use Drupal\Core\Database\Connection;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\structure_sync\StructureSyncHelper;
@@ -21,6 +22,8 @@ class BlocksSyncForm extends ConfigFormBase {
    */
   protected $database;
 
+  protected $entityTypeManager;
+
   /**
    * {@inheritdoc}
    */
@@ -31,9 +34,10 @@ class BlocksSyncForm extends ConfigFormBase {
   /**
    * Class constructor.
    */
-  public function __construct(ConfigFactoryInterface $config_factory, Connection $database) {
+  public function __construct(ConfigFactoryInterface $config_factory, Connection $database, EntityTypeManagerInterface $entityManager) {
     parent::__construct($config_factory);
     $this->database = $database;
+    $this->entityTypeManager = $entityManager;
   }
 
   /**
@@ -42,7 +46,8 @@ class BlocksSyncForm extends ConfigFormBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('config.factory'),
-      $container->get('database')
+      $container->get('database'),
+      $container->get('entity_type.manager')
     );
   }
 
@@ -66,6 +71,12 @@ class BlocksSyncForm extends ConfigFormBase {
       '#title' => $this->t('Custom blocks'),
     ];
 
+    $form['warning'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#value' => $this->t('Currently only supports custom blocks (with a) "body" field'),
+    ];
+
     $form['export'] = [
       '#type' => 'details',
       '#title' => $this->t('Export'),
@@ -81,21 +92,17 @@ class BlocksSyncForm extends ConfigFormBase {
       '#submit' => [[$helper, 'exportCustomBlocks']],
     ];
 
-    // Get a list of all blocks (their current names and uuids).
-    $block_list = [];
-    $query = $this->database->select('block_content', 'bc');
-    $query->fields('bc', ['uuid']);
-    $query->addField('bcfd', 'info');
-    $query->join('block_content_field_data', 'bcfd', 'bcfd.id = bc.id');
-    $blocks = $query->execute()->fetchAll();
+    $blockList = [];
+    $blocks = $this->entityTypeManager->getStorage('block_content')
+      ->loadMultiple();
     foreach ($blocks as $block) {
-      $block_list[$block->uuid] = $block->info;
+      $blockList[$block->uuid()] = $block->info->getValue()[0]['value'];
     }
 
     $form['export']['export_block_list'] = [
       '#type' => 'checkboxes',
-      '#options' => $block_list,
-      '#default_value' => array_keys($block_list),
+      '#options' => $blockList,
+      '#default_value' => array_keys($blockList),
       '#title' => $this->t('Select the custom blocks you would like to export'),
     ];
 
