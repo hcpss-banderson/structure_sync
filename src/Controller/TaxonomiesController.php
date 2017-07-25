@@ -148,6 +148,30 @@ class TaxonomiesController extends ControllerBase {
       $taxonomies = $taxonomiesConfig;
     }
 
+    if (array_key_exists('drush', $form) && $form['drush'] === TRUE) {
+      $context = [];
+      $context['drush'] = TRUE;
+
+      switch ($style) {
+        case 'full':
+          self::deleteDeletedTaxonomies($taxonomies, $context);
+          self::importTaxonomiesFull($taxonomies, $context);
+          self::taxonomiesImportFinishedCallback(NULL, NULL, NULL);
+          break;
+        case 'safe':
+          self::importTaxonomiesSafe($taxonomies, $context);
+          self::taxonomiesImportFinishedCallback(NULL, NULL, NULL);
+          break;
+        case 'force':
+          self::deleteTaxonomies();
+          self::importTaxonomiesForce($taxonomies, $context);
+          self::taxonomiesImportFinishedCallback(NULL, NULL, NULL);
+          break;
+      }
+
+      return;
+    }
+
     // Import the taxonomies with the chosen style of importing.
     switch ($style) {
       case 'full':
@@ -319,6 +343,9 @@ class TaxonomiesController extends ControllerBase {
               unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
             }
 
+            if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+              drush_log('Imported "' . $taxonomy['name'] . '" into ' . $vid, 'ok');
+            }
             StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
 
             $context['sandbox']['progress']++;
@@ -410,6 +437,9 @@ class TaxonomiesController extends ControllerBase {
                   unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
                 }
 
+                if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+                  drush_log('Imported "' . $taxonomy['name'] . '" into ' . $vid, 'ok');
+                }
                 StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
 
                 $context['sandbox']['progress']++;
@@ -518,6 +548,9 @@ class TaxonomiesController extends ControllerBase {
                 unset($tidsLeft[array_search($taxonomy['tid'], $tidsLeft)]);
               }
 
+              if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+                drush_log('Imported "' . $taxonomy['name'] . '" into ' . $vid, 'ok');
+              }
               StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
 
               $context['sandbox']['progress']++;

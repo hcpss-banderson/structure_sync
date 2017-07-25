@@ -78,7 +78,10 @@ function drush_structure_sync_import_taxonomies() {
   if ($choice) {
     drush_print('Using "' . $options[$choice] . '" import style');
 
-    StructureSyncHelper::importTaxonomies(['style' => $choice]);
+    StructureSyncHelper::importTaxonomies([
+      'style' => $choice,
+      'drush' => TRUE,
+      ]);
 
     drush_log('Successfully imported taxonomies', 'ok');
   }
