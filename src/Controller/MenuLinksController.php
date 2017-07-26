@@ -73,6 +73,11 @@ class MenuLinksController extends ControllerBase {
         'langcode' => $menuLink->langcode->getValue()[0]['value'],
         'uuid' => $menuLink->uuid(),
       ];
+
+      if (array_key_exists('drush', $form) && $form['drush'] === TRUE) {
+        drush_log('Exported "' . $menuLink->title->getValue()[0]['value'] . '" of menu "' . $menuLink->menu_name->getValue()[0]['value'] . '"', 'ok');
+      }
+      StructureSyncHelper::logMessage('Exported "' . $menuLink->title->getValue()[0]['value'] . '" of menu "' . $menuLink->menu_name->getValue()[0]['value'] . '"');
     }
 
     $this->config->set('menus', $customMenuLinks)->save();
@@ -121,6 +126,30 @@ class MenuLinksController extends ControllerBase {
     }
     else {
       $menus = $menusConfig;
+    }
+
+    if (array_key_exists('drush', $form) && $form['drush'] === TRUE) {
+      $context = [];
+      $context['drush'] = TRUE;
+
+      switch ($style) {
+        case 'full':
+          self::deleteDeletedMenuLinks($menus, $context);
+          self::importMenuLinksFull($menus, $context);
+          self::menuLinksImportFinishedCallback(NULL, NULL, NULL);
+          break;
+        case 'safe':
+          self::importMenuLinksSafe($menus, $context);
+          self::menuLinksImportFinishedCallback(NULL, NULL, NULL);
+          break;
+        case 'force':
+          self::deleteMenuLinks($context);
+          self::importMenuLinksForce($menus, $context);
+          self::menuLinksImportFinishedCallback(NULL, NULL, NULL);
+          break;
+      }
+
+      return;
     }
 
     // Import the menu links with the chosen style of importing.
@@ -198,6 +227,9 @@ class MenuLinksController extends ControllerBase {
     $entities = $controller->loadMultiple($ids);
     $controller->delete($entities);
 
+    if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+      drush_log('Deleted menu links that were not in config', 'ok');
+    }
     StructureSyncHelper::logMessage('Deleted menu links that were not in config');
   }
 
@@ -302,6 +334,9 @@ class MenuLinksController extends ControllerBase {
             unset($idsLeft[$menuLink['uuid']]);
           }
 
+          if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+            drush_log('Imported "' . $menuLink['title'] . '" into ' . $menuLink['menu_name'], 'ok');
+          }
           StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into ' . $menuLink['menu_name']);
 
           $context['sandbox']['progress']++;
@@ -355,6 +390,9 @@ class MenuLinksController extends ControllerBase {
         'uuid' => $menuLink['uuid'],
       ])->save();
 
+      if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+        drush_log('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu', 'ok');
+      }
       StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu');
     }
   }
@@ -370,6 +408,9 @@ class MenuLinksController extends ControllerBase {
       ->getStorage('menu_link_content')
       ->delete($entities);
 
+    if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+      drush_log('Deleted all (content) menu links', 'ok');
+    }
     StructureSyncHelper::logMessage('Deleted all (content) menu links');
   }
 
@@ -394,6 +435,9 @@ class MenuLinksController extends ControllerBase {
         'uuid' => $menuLink['uuid'],
       ])->save();
 
+      if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+        drush_log('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu', 'ok');
+      }
       StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu');
     }
   }

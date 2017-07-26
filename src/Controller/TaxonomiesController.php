@@ -99,6 +99,9 @@ class TaxonomiesController extends ControllerBase {
       // Save the retrieved taxonomies to the config.
       $this->config->set('taxonomies.' . $vocabulary, $taxonomies)->save();
 
+      if (array_key_exists('drush', $form) && $form['drush'] === TRUE) {
+        drush_log('Exported ' . $vocabulary, 'ok');
+      }
       StructureSyncHelper::logMessage('Exported ' . $vocabulary);
     }
 
@@ -163,7 +166,7 @@ class TaxonomiesController extends ControllerBase {
           self::taxonomiesImportFinishedCallback(NULL, NULL, NULL);
           break;
         case 'force':
-          self::deleteTaxonomies();
+          self::deleteTaxonomies($context);
           self::importTaxonomiesForce($taxonomies, $context);
           self::taxonomiesImportFinishedCallback(NULL, NULL, NULL);
           break;
@@ -249,6 +252,9 @@ class TaxonomiesController extends ControllerBase {
     $entities = $controller->loadMultiple($tids);
     $controller->delete($entities);
 
+    if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+      drush_log('Deleted taxonomies that were not in config', 'ok');
+    }
     StructureSyncHelper::logMessage('Deleted taxonomies that were not in config');
   }
 
@@ -365,6 +371,9 @@ class TaxonomiesController extends ControllerBase {
     }
 
     StructureSyncHelper::logMessage('Flushing all caches');
+    if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+      drush_log('Flushing all caches', 'ok');
+    }
 
     drupal_flush_all_caches();
 
@@ -482,7 +491,7 @@ class TaxonomiesController extends ControllerBase {
   /**
    * Function to delete all taxonomy terms.
    */
-  public static function deleteTaxonomies() {
+  public static function deleteTaxonomies(&$context) {
     $query = StructureSyncHelper::getEntityQuery('taxonomy_term');
     $tids = $query->execute();
     $controller = StructureSyncHelper::getEntityManager()
@@ -490,6 +499,9 @@ class TaxonomiesController extends ControllerBase {
     $entities = $controller->loadMultiple($tids);
     $controller->delete($entities);
 
+    if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
+      drush_log('Deleted all taxonomies', 'ok');
+    }
     StructureSyncHelper::logMessage('Deleted all taxonomies');
   }
 

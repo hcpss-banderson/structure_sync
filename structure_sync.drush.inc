@@ -53,7 +53,7 @@ function structure_sync_drush_command() {
 function drush_structure_sync_export_taxonomies() {
   drush_print('Exporting taxonomies...');
 
-  StructureSyncHelper::exportTaxonomies();
+  StructureSyncHelper::exportTaxonomies(['drush' => TRUE]);
 
   drush_log('Successfully exported taxonomies', 'ok');
 }
@@ -99,7 +99,7 @@ function drush_structure_sync_import_taxonomies() {
 function drush_structure_sync_export_blocks() {
   drush_print('Exporting blocks...');
 
-  StructureSyncHelper::exportCustomBlocks();
+  StructureSyncHelper::exportCustomBlocks(['drush' => TRUE]);
 
   drush_log('Successfully exported blocks', 'ok');
 }
@@ -124,7 +124,10 @@ function drush_structure_sync_import_blocks() {
   if ($choice) {
     drush_print('Using "' . $options[$choice] . '" import style');
 
-    StructureSyncHelper::importCustomBlocks(['style' => $choice]);
+    StructureSyncHelper::importCustomBlocks([
+      'style' => $choice,
+      'drush' => TRUE,
+      ]);
 
     drush_log('Successfully imported custom blocks', 'ok');
   }
@@ -142,7 +145,7 @@ function drush_structure_sync_import_blocks() {
 function drush_structure_sync_export_menus() {
   drush_print('Exporting menu links...');
 
-  StructureSyncHelper::exportMenuLinks();
+  StructureSyncHelper::exportMenuLinks(['drush' => TRUE]);
 
   drush_log('Successfully exported menu links', 'ok');
 }
@@ -167,7 +170,10 @@ function drush_structure_sync_import_menus() {
   if ($choice) {
     drush_print('Using "' . $options[$choice] . '" import style');
 
-    StructureSyncHelper::importMenuLinks(['style' => $choice]);
+    StructureSyncHelper::importMenuLinks([
+      'style' => $choice,
+      'drush' => TRUE,
+      ]);
 
     drush_log('Successfully imported menu links', 'ok');
   }
