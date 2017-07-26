@@ -1,7 +1,8 @@
 <?php
 
 /**
- * @file Drush commands for syncing structure content.
+ * @file
+ * Drush commands for syncing structure content.
  */
 
 use Drupal\structure_sync\StructureSyncHelper;
@@ -81,7 +82,7 @@ function drush_structure_sync_import_taxonomies() {
     StructureSyncHelper::importTaxonomies([
       'style' => $choice,
       'drush' => TRUE,
-      ]);
+    ]);
 
     drush_log('Successfully imported taxonomies', 'ok');
   }
@@ -127,7 +128,7 @@ function drush_structure_sync_import_blocks() {
     StructureSyncHelper::importCustomBlocks([
       'style' => $choice,
       'drush' => TRUE,
-      ]);
+    ]);
 
     drush_log('Successfully imported custom blocks', 'ok');
   }
@@ -173,7 +174,7 @@ function drush_structure_sync_import_menus() {
     StructureSyncHelper::importMenuLinks([
       'style' => $choice,
       'drush' => TRUE,
-      ]);
+    ]);
 
     drush_log('Successfully imported menu links', 'ok');
   }

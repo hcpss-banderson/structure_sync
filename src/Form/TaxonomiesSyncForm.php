@@ -8,7 +8,6 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\structure_sync\StructureSyncHelper;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Form;
 
 /**
  * Import and export form for content in structure, like taxonomy terms.
@@ -134,7 +133,7 @@ class TaxonomiesSyncForm extends ConfigFormBase {
       $vocabulary_list_config[$voc] = $vocabulary_list[$voc];
 
       if (!in_array($vocabulary_list_config[$voc], $vocabulary_list)) {
-        drupal_set_message('Vocabulary "' . $voc . '" does not (yet) exist on the site', 'warning');
+        drupal_set_message($this->t('Vocabulary "@voc" does not (yet) exist on the site', ['@voc' => $voc]), 'warning');
 
         unset($vocabulary_list_config[$voc]);
       }

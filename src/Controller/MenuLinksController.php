@@ -138,10 +138,12 @@ class MenuLinksController extends ControllerBase {
           self::importMenuLinksFull($menus, $context);
           self::menuLinksImportFinishedCallback(NULL, NULL, NULL);
           break;
+
         case 'safe':
           self::importMenuLinksSafe($menus, $context);
           self::menuLinksImportFinishedCallback(NULL, NULL, NULL);
           break;
+
         case 'force':
           self::deleteMenuLinks($context);
           self::importMenuLinksForce($menus, $context);

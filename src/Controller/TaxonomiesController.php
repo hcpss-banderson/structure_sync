@@ -161,10 +161,12 @@ class TaxonomiesController extends ControllerBase {
           self::importTaxonomiesFull($taxonomies, $context);
           self::taxonomiesImportFinishedCallback(NULL, NULL, NULL);
           break;
+
         case 'safe':
           self::importTaxonomiesSafe($taxonomies, $context);
           self::taxonomiesImportFinishedCallback(NULL, NULL, NULL);
           break;
+
         case 'force':
           self::deleteTaxonomies($context);
           self::importTaxonomiesForce($taxonomies, $context);

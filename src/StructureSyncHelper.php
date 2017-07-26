@@ -18,7 +18,6 @@ class StructureSyncHelper {
   public static function exportTaxonomies(array $form = NULL, FormStateInterface $form_state = NULL) {
     $taxonomiesController = new TaxonomiesController();
     $taxonomiesController->exportTaxonomies($form, $form_state);
-    return;
   }
 
   /**
@@ -27,7 +26,6 @@ class StructureSyncHelper {
   public static function exportCustomBlocks(array $form = NULL, FormStateInterface $form_state = NULL) {
     $blocksController = new BlocksController();
     $blocksController->exportBlocks($form, $form_state);
-    return;
   }
 
   /**
@@ -36,7 +34,6 @@ class StructureSyncHelper {
   public static function exportMenuLinks(array $form = NULL, FormStateInterface $form_state = NULL) {
     $menuLinksController = new MenuLinksController();
     $menuLinksController->exportMenuLinks($form, $form_state);
-    return;
   }
 
   /**
@@ -49,7 +46,6 @@ class StructureSyncHelper {
   public static function importTaxonomies(array $form, FormStateInterface $form_state = NULL) {
     $taxonomiesController = new TaxonomiesController();
     $taxonomiesController->importTaxonomies($form, $form_state);
-    return;
   }
 
   /**
@@ -62,7 +58,6 @@ class StructureSyncHelper {
   public static function importCustomBlocks(array $form, FormStateInterface $form_state = NULL) {
     $customBlocksController = new BlocksController();
     $customBlocksController->importBlocks($form, $form_state);
-    return;
   }
 
   /**
@@ -75,7 +70,6 @@ class StructureSyncHelper {
   public static function importMenuLinks(array $form, FormStateInterface $form_state = NULL) {
     $menuLinksController = new MenuLinksController();
     $menuLinksController->importMenuLinks($form, $form_state);
-    return;
   }
 
   /**
@@ -187,8 +181,12 @@ class StructureSyncHelper {
   /**
    * Function to get an entity query.
    *
-   * @param $entityType
+   * @param string $entityType
+   *   The entity type (for example, node) for which the query object should be
+   *   returned.
+   *
    * @return \Drupal\Core\Entity\Query\QueryInterface
+   *   Entity query.
    */
   public static function getEntityQuery($entityType) {
     return \Drupal::entityQuery($entityType);
@@ -198,6 +196,7 @@ class StructureSyncHelper {
    * Function to get an entity type manager.
    *
    * @return \Drupal\Core\Entity\EntityTypeManagerInterface
+   *   Entity type manager.
    */
   public static function getEntityManager() {
     return \Drupal::entityTypeManager();
@@ -207,6 +206,7 @@ class StructureSyncHelper {
    * Function to get an entity field manager.
    *
    * @return \Drupal\Core\Entity\EntityFieldManagerInterface
+   *   Entity field manager.
    */
   public static function getEntityFieldManager() {
     return \Drupal::service('entity_field.manager');

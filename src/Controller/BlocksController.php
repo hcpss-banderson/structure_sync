@@ -149,10 +149,12 @@ class BlocksController extends ControllerBase {
           self::importBlocksFull($blocks, $context);
           self::blocksImportFinishedCallback(NULL, NULL, NULL);
           break;
+
         case 'safe':
           self::importBlocksSafe($blocks, $context);
           self::blocksImportFinishedCallback(NULL, NULL, NULL);
           break;
+
         case 'force':
           self::deleteBlocks($context);
           self::importBlocksForce($blocks, $context);
