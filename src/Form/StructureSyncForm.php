@@ -43,6 +43,7 @@ class StructureSyncForm extends ConfigFormBase {
 
     $form['options'] = [
       '#type' => 'fieldset',
+      '#title' => $this->t('Options'),
     ];
 
     $form['options']['log'] = [
