@@ -203,4 +203,13 @@ class StructureSyncHelper {
     return \Drupal::entityTypeManager();
   }
 
+  /**
+   * Function to get an entity field manager.
+   *
+   * @return \Drupal\Core\Entity\EntityFieldManagerInterface
+   */
+  public static function getEntityFieldManager() {
+    return \Drupal::service('entity_field.manager');
+  }
+
 }

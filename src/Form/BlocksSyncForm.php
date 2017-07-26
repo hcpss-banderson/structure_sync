@@ -71,12 +71,6 @@ class BlocksSyncForm extends ConfigFormBase {
       '#title' => $this->t('Custom blocks'),
     ];
 
-    $form['warning'] = [
-      '#type' => 'html_tag',
-      '#tag' => 'div',
-      '#value' => $this->t('Currently only supports custom blocks (with a) "body" field'),
-    ];
-
     $form['export'] = [
       '#type' => 'details',
       '#title' => $this->t('Export'),

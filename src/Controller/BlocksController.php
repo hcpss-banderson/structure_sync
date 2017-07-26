@@ -54,21 +54,34 @@ class BlocksController extends ControllerBase {
       }
     }
     else {
-      $blocks = $this->entityTypeManager()->getStorage('block_content')
+      $blocks = $this->entityTypeManager->getStorage('block_content')
         ->loadMultiple();
     }
 
     $customBlocks = [];
     foreach ($blocks as $block) {
-      $customBlocks[] = [
+      $customBlock = [
         'info' => $block->info->getValue()[0]['value'],
         'langcode' => $block->langcode->getValue()[0]['value'],
         'uuid' => $block->uuid(),
         'bundle' => $block->bundle(),
-        'body_value' => $block->body->getValue()[0]['value'],
-        'body_summary' => $block->body->getValue()[0]['summary'],
-        'body_format' => $block->body->getValue()[0]['format'],
       ];
+
+      $entityFieldManager = StructureSyncHelper::getEntityFieldManager();
+      $fields = $entityFieldManager->getFieldDefinitions('block_content', $block->bundle());
+
+      foreach ($fields as $key => $field) {
+        if ($field->getFieldStorageDefinition()->isBaseField()) {
+          unset($fields[$key]);
+        }
+      }
+
+      foreach ($fields as $field) {
+        $fieldName = $field->getName();
+        $customBlock['fields'][$fieldName] = $block->$fieldName->getValue()[0];
+      }
+
+      $customBlocks[] = $customBlock;
     }
 
     $this->config->set('blocks', $customBlocks)->save();
@@ -258,17 +271,20 @@ class BlocksController extends ControllerBase {
       $ids = $query->execute();
 
       if (count($ids) <= 0) {
-        BlockContent::create([
+        $blockContent = BlockContent::create([
           'info' => $block['info'],
           'langcode' => $block['langcode'],
           'uuid' => $block['uuid'],
           'type' => $block['bundle'],
-          'body' => [
-            'value' => $block['body_value'],
-            'summary' => $block['body_summary'],
-            'format' => $block['body_format'],
-          ],
-        ])->save();
+        ]);
+
+        if (array_key_exists('fields', $block)) {
+          foreach ($block['fields'] as $fieldName => $fieldValue) {
+            $blockContent->set($fieldName, $fieldValue);
+          }
+        }
+
+        $blockContent->save();
 
         if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
           drush_log('Imported "' . $block['info'] . '"', 'ok');
@@ -278,17 +294,19 @@ class BlocksController extends ControllerBase {
       else {
         foreach ($entities as $entity) {
           if ($block['uuid'] === $entity->uuid()) {
-            $customBlock = BlockContent::load($entity->id());
-            if (!empty($customBlock)) {
-              $customBlock
+            $blockContent = BlockContent::load($entity->id());
+            if (!empty($blockContent)) {
+              $blockContent
                 ->setInfo($block['info'])
-                ->set('langcode', $block['langcode'])
-                ->set('type', $block['bundle'])
-                ->set('body', [
-                  'value' => $block['body_value'],
-                  'summary' => $block['body_summary'],
-                  'format' => $block['body_format'],
-                ])->save();
+                ->set('langcode', $block['langcode']);
+
+              if (array_key_exists('fields', $block)) {
+                foreach ($block['fields'] as $fieldName => $fieldValue) {
+                  $blockContent->set($fieldName, $fieldValue);
+                }
+              }
+
+              $blockContent->save();
             }
 
             if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
@@ -329,17 +347,20 @@ class BlocksController extends ControllerBase {
     }
 
     foreach ($blocksFiltered as $block) {
-      BlockContent::create([
+      $blockContent = BlockContent::create([
         'info' => $block['info'],
         'langcode' => $block['langcode'],
         'uuid' => $block['uuid'],
         'type' => $block['bundle'],
-        'body' => [
-          'value' => $block['body_value'],
-          'summary' => $block['body_summary'],
-          'format' => $block['body_format'],
-        ],
-      ])->save();
+      ]);
+
+      if (array_key_exists('fields', $block)) {
+        foreach ($block['fields'] as $fieldName => $fieldValue) {
+          $blockContent->set($fieldName, $fieldValue);
+        }
+      }
+
+      $blockContent->save();
 
       if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
         drush_log('Imported "' . $block['info'] . '"', 'ok');
@@ -370,17 +391,20 @@ class BlocksController extends ControllerBase {
    */
   public static function importBlocksForce($blocks, &$context) {
     foreach ($blocks as $block) {
-      BlockContent::create([
+      $blockContent = BlockContent::create([
         'info' => $block['info'],
         'langcode' => $block['langcode'],
         'uuid' => $block['uuid'],
         'type' => $block['bundle'],
-        'body' => [
-          'value' => $block['body_value'],
-          'summary' => $block['body_summary'],
-          'format' => $block['body_format'],
-        ],
-      ])->save();
+      ]);
+
+      if (array_key_exists('fields', $block)) {
+        foreach ($block['fields'] as $fieldName => $fieldValue) {
+          $blockContent->set($fieldName, $fieldValue);
+        }
+      }
+
+      $blockContent->save();
 
       if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
         drush_log('Imported "' . $block['info'] . '"', 'ok');
