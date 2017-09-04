@@ -1,7 +1,10 @@
 name: 'Structure Sync'
 description: 'Tool for syncing structural data that is stored as content.'
 core: 8.x
+configure: structure_sync.general.form
 dependencies:
   - drupal:taxonomy
+  - drupal:menu
+  - drupal:block
 package: Structure
 type: module
