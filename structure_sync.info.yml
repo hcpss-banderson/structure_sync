@@ -4,7 +4,7 @@ core: 8.x
 configure: structure_sync.general.form
 dependencies:
   - drupal:taxonomy
-  - drupal:menu
+  - menu_link_content
   - drupal:block
 package: Structure
 type: module
