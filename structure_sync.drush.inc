@@ -42,8 +42,48 @@ function structure_sync_drush_command() {
     'drupal dependencies' => ['structure_sync'],
     'aliases' => ['im'],
   ];
+
+  $items['import-all'] = [
+    'description' => 'Import menu links, Taxonomy and Blocks',
+    'drupal dependencies' => ['structure_sync'],
+    'aliases' => ['ia'],
+  ];
+
+  $items['export-all'] = [
+    'description' => 'Export menu links, Taxonomy and Blocks',
+    'drupal dependencies' => ['structure_sync'],
+    'aliases' => ['ea'],
+  ];
   return $items;
 }
+
+
+/**
+ * Call back function drush_structure_sync_export_taxonomies()
+ *
+ * The call back function name in the  following format
+ *   drush_{module_name}_{item_id_for_command}()
+ */
+function drush_structure_sync_import_all() {
+  drush_structure_sync_import_taxonomies();
+  drush_structure_sync_import_menus();
+  drush_structure_sync_import_blocks();
+}
+
+
+/**
+ * Call back function drush_structure_sync_export_taxonomies()
+ *
+ * The call back function name in the  following format
+ *   drush_{module_name}_{item_id_for_command}()
+ */
+function drush_structure_sync_export_all() {
+  drush_structure_sync_export_taxonomies();
+  drush_structure_sync_export_menus();
+  drush_structure_sync_export_blocks();
+}
+
+
 
 /**
  * Call back function drush_structure_sync_export_taxonomies()
