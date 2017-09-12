@@ -57,9 +57,8 @@ function structure_sync_drush_command() {
   return $items;
 }
 
-
 /**
- * Call back function drush_structure_sync_export_taxonomies()
+ * Call back function drush_structure_sync_import_all()
  *
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
@@ -70,9 +69,8 @@ function drush_structure_sync_import_all() {
   drush_structure_sync_import_blocks();
 }
 
-
 /**
- * Call back function drush_structure_sync_export_taxonomies()
+ * Call back function drush_structure_sync_export_all()
  *
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
@@ -82,8 +80,6 @@ function drush_structure_sync_export_all() {
   drush_structure_sync_export_menus();
   drush_structure_sync_export_blocks();
 }
-
-
 
 /**
  * Call back function drush_structure_sync_export_taxonomies()

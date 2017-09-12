@@ -11,6 +11,10 @@ The available Drush commands are:
 'import-blocks'     ('ib') - Import custom blocks from configuration
 'export-menus'      ('em') - Export menu links to configuration
 'import-menus'      ('im') - Import menu links from configuration
+'export-all'        ('ea') - Export taxonomy terms, custom blocks and menu links
+                             to configuration
+'import-all'        ('ia') - Import taxonomy terms, custom blocks and menu links
+                             from configuration
 
 The available admin interface screens are:
 /admin/structure/structure-sync/general    - General options for this module
