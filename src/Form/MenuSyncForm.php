@@ -105,6 +105,16 @@ class MenuSyncForm extends ConfigFormBase {
       '#open' => TRUE,
     ];
 
+    $menus = $this->config('structure_sync.data')->get('menus');
+
+    if (empty($menus)) {
+      $form['import']['import_no_data'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t("There's no data to import, please do an export first."),
+      ];
+      return $form;
+    }
+
     $form['import']['import_menus_safe'] = [
       '#type' => 'submit',
       '#value' => $this->t('Import menu links (safely)'),
@@ -127,7 +137,6 @@ class MenuSyncForm extends ConfigFormBase {
       '#submit' => [[$helper, 'importMenuLinksForce']],
     ];
 
-    $menus = $this->config('structure_sync.data')->get('menus');
     $menu_list = [];
     foreach ($menus as $menu) {
       $menuName = $this->config('system.menu.' . $menu['menu_name'])

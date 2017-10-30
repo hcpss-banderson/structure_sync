@@ -107,6 +107,16 @@ class BlocksSyncForm extends ConfigFormBase {
       '#open' => TRUE,
     ];
 
+    $block_list = $this->config('structure_sync.data')->get('blocks');
+
+    if (empty($block_list)) {
+      $form['import']['import_no_data'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t("There's no data to import, please do an export first."),
+      ];
+      return $form;
+    }
+
     $form['import']['import_blocks_safe'] = [
       '#type' => 'submit',
       '#value' => $this->t('Import custom blocks (safely)'),
@@ -128,8 +138,6 @@ class BlocksSyncForm extends ConfigFormBase {
       '#name' => 'importBlocksForce',
       '#submit' => [[$helper, 'importCustomBlocksForce']],
     ];
-
-    $block_list = $this->config('structure_sync.data')->get('blocks');
 
     $block_list_config = [];
 

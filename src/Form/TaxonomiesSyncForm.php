@@ -103,6 +103,16 @@ class TaxonomiesSyncForm extends ConfigFormBase {
       '#open' => TRUE,
     ];
 
+    $taxonomies = $this->config('structure_sync.data')->get('taxonomies');
+
+    if (empty($taxonomies)) {
+      $form['import']['import_no_data'] = [
+        '#type' => 'markup',
+        '#markup' => $this->t("There's no data to import, please do an export first."),
+      ];
+      return $form;
+    }
+
     $form['import']['import_taxonomies_safe'] = [
       '#type' => 'submit',
       '#value' => $this->t('Import taxonomies (safely)'),
@@ -125,9 +135,7 @@ class TaxonomiesSyncForm extends ConfigFormBase {
       '#submit' => [[$helper, 'importTaxonomiesForce']],
     ];
 
-    $voc_list = array_keys($this->config('structure_sync.data')
-      ->get('taxonomies'));
-
+    $voc_list = array_keys($taxonomies);
     $vocabulary_list_config = array_combine($voc_list, $voc_list);
     foreach ($vocabulary_list_config as $voc) {
       $vocabulary_list_config[$voc] = $vocabulary_list[$voc];
