@@ -248,13 +248,15 @@ class MenuLinksController extends ControllerBase {
     foreach ($menus as $menuLink) {
       $uuidsInConfig[] = $menuLink['uuid'];
     }
-
-    $query = StructureSyncHelper::getEntityQuery('menu_link_content');
-    $query->condition('uuid', $uuidsInConfig, 'IN');
-    $ids = $query->execute();
-    $controller = StructureSyncHelper::getEntityManager()
-      ->getStorage('menu_link_content');
-    $entities = $controller->loadMultiple($ids);
+    $entities = [];
+    if(!empty($uuidsInConfig)) {
+        $query = StructureSyncHelper::getEntityQuery('menu_link_content');
+        $query->condition('uuid', $uuidsInConfig, 'IN');
+        $ids = $query->execute();
+        $controller = StructureSyncHelper::getEntityManager()
+            ->getStorage('menu_link_content');
+        $entities = $controller->loadMultiple($ids);
+    }
 
     $parents = array_column($menus, 'parent');
     foreach ($parents as &$parent) {
