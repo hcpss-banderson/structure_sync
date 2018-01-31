@@ -221,13 +221,15 @@ class MenuLinksController extends ControllerBase {
       $uuidsInConfig[] = $menuLink['uuid'];
     }
 
-    $query = StructureSyncHelper::getEntityQuery('menu_link_content');
-    $query->condition('uuid', $uuidsInConfig, 'NOT IN');
-    $ids = $query->execute();
-    $controller = StructureSyncHelper::getEntityManager()
-      ->getStorage('menu_link_content');
-    $entities = $controller->loadMultiple($ids);
-    $controller->delete($entities);
+    if(!empty($uuidsInConfig)) {
+        $query = StructureSyncHelper::getEntityQuery('menu_link_content');
+        $query->condition('uuid', $uuidsInConfig, 'NOT IN');
+        $ids = $query->execute();
+        $controller = StructureSyncHelper::getEntityManager()
+            ->getStorage('menu_link_content');
+        $entities = $controller->loadMultiple($ids);
+        $controller->delete($entities);
+    }
 
     if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
       drush_log('Deleted menu links that were not in config', 'ok');
