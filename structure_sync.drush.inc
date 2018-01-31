@@ -11,6 +11,7 @@ use Drupal\structure_sync\StructureSyncHelper;
  * Implements hook_drush_command().
  */
 function structure_sync_drush_command() {
+  $arguments = ['arguments' => ['choice' => 'The choice as argument']];
   $items = [];
   $items['export-taxonomies'] = [
     'description' => 'Export the taxonomies',
@@ -21,6 +22,7 @@ function structure_sync_drush_command() {
     'description' => 'Import the taxonomies',
     'drupal dependencies' => ['structure_sync'],
     'aliases' => ['it'],
+    $arguments,
   ];
   $items['export-blocks'] = [
     'description' => 'Export blocks',
@@ -31,6 +33,7 @@ function structure_sync_drush_command() {
     'description' => 'Import blocks',
     'drupal dependencies' => ['structure_sync'],
     'aliases' => ['ib'],
+    $arguments,
   ];
   $items['export-menus'] = [
     'description' => 'Export menu links',
@@ -41,12 +44,14 @@ function structure_sync_drush_command() {
     'description' => 'Import menu links',
     'drupal dependencies' => ['structure_sync'],
     'aliases' => ['im'],
+    $arguments,
   ];
 
   $items['import-all'] = [
     'description' => 'Import menu links, Taxonomy and Blocks',
     'drupal dependencies' => ['structure_sync'],
     'aliases' => ['ia'],
+    $arguments,
   ];
 
   $items['export-all'] = [
@@ -63,10 +68,10 @@ function structure_sync_drush_command() {
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
  */
-function drush_structure_sync_import_all() {
-  drush_structure_sync_import_taxonomies();
-  drush_structure_sync_import_menus();
-  drush_structure_sync_import_blocks();
+function drush_structure_sync_import_all($choice = FALSE) {
+  drush_structure_sync_import_taxonomies($choice);
+  drush_structure_sync_import_menus($choice);
+  drush_structure_sync_import_blocks($choice);
 }
 
 /**
@@ -101,7 +106,7 @@ function drush_structure_sync_export_taxonomies() {
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
  */
-function drush_structure_sync_import_taxonomies() {
+function drush_structure_sync_import_taxonomies($choice = FALSE) {
   drush_print('Importing taxonomies...');
 
   $options = [
@@ -110,9 +115,11 @@ function drush_structure_sync_import_taxonomies() {
     'force' => 'Force',
   ];
 
-  $choice = drush_choice($options, 'What import style would you like?');
+  if (!$choice) {
+    $choice = drush_choice($options, 'What import style would you like?');
+  }
 
-  if ($choice) {
+  if ($choice && array_key_exists($choice, $options)) {
     drush_print('Using "' . $options[$choice] . '" import style');
 
     StructureSyncHelper::importTaxonomies([
@@ -147,7 +154,7 @@ function drush_structure_sync_export_blocks() {
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
  */
-function drush_structure_sync_import_blocks() {
+function drush_structure_sync_import_blocks($choice = FALSE) {
   drush_print('Importing blocks...');
 
   $options = [
@@ -156,9 +163,11 @@ function drush_structure_sync_import_blocks() {
     'force' => 'Force',
   ];
 
-  $choice = drush_choice($options, 'What import style would you like?');
+  if (!$choice) {
+    $choice = drush_choice($options, 'What import style would you like?');
+  }
 
-  if ($choice) {
+  if ($choice && array_key_exists($choice, $options)) {
     drush_print('Using "' . $options[$choice] . '" import style');
 
     StructureSyncHelper::importCustomBlocks([
@@ -193,7 +202,7 @@ function drush_structure_sync_export_menus() {
  * The call back function name in the  following format
  *   drush_{module_name}_{item_id_for_command}()
  */
-function drush_structure_sync_import_menus() {
+function drush_structure_sync_import_menus($choice = FALSE) {
   drush_print('Importing menu links...');
 
   $options = [
@@ -202,9 +211,11 @@ function drush_structure_sync_import_menus() {
     'force' => 'Force',
   ];
 
-  $choice = drush_choice($options, 'What import style would you like?');
+  if (!$choice) {
+    $choice = drush_choice($options, 'What import style would you like?');
+  }
 
-  if ($choice) {
+  if ($choice && array_key_exists($choice, $options)) {
     drush_print('Using "' . $options[$choice] . '" import style');
 
     StructureSyncHelper::importMenuLinks([
