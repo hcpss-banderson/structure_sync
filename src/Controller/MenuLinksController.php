@@ -72,6 +72,7 @@ class MenuLinksController extends ControllerBase {
         'weight' => $menuLink->weight->getValue()[0]['value'],
         'langcode' => $menuLink->langcode->getValue()[0]['value'],
         'uuid' => $menuLink->uuid(),
+        'attributes' => !empty($menuLink->link->getValue()[0]['options']['attributes']) ? $menuLink->link->getValue()[0]['options']['attributes'] : NULL,
       ];
 
       if (array_key_exists('drush', $form) && $form['drush'] === TRUE) {
@@ -299,6 +300,7 @@ class MenuLinksController extends ControllerBase {
               'link' => [
                 'uri' => $menuLink['uri'],
                 'title' => $menuLink['link_title'],
+                'options' => !empty($menuLink['attributes']) ? ['attributes' => $menuLink['attributes']] : NULL,
               ],
               'menu_name' => $menuLink['menu_name'],
               'expanded' => $menuLink['expanded'] === '1' ? TRUE : FALSE,
@@ -385,6 +387,7 @@ class MenuLinksController extends ControllerBase {
         'link' => [
           'uri' => $menuLink['uri'],
           'title' => $menuLink['link_title'],
+          'options' => !empty($menuLink['attributes']) ? ['attributes' => $menuLink['attributes']] : NULL,
         ],
         'menu_name' => $menuLink['menu_name'],
         'expanded' => $menuLink['expanded'] === '1' ? TRUE : FALSE,
@@ -430,6 +433,7 @@ class MenuLinksController extends ControllerBase {
         'link' => [
           'uri' => $menuLink['uri'],
           'title' => $menuLink['link_title'],
+          'options' => !empty($menuLink['attributes']) ? ['attributes' => $menuLink['attributes']] : NULL,
         ],
         'menu_name' => $menuLink['menu_name'],
         'expanded' => $menuLink['expanded'] === '1' ? TRUE : FALSE,
