@@ -151,6 +151,16 @@ class TaxonomiesController extends ControllerBase {
       $taxonomies = $taxonomiesConfig;
     }
 
+    // Sorts taxonomies so that all parent terms come before -- and therefore
+    // are created before -- their respective child terms
+    foreach ($taxonomies as $taxonomy => $terms) {
+      $parents = [];
+      foreach ($terms as $key => $term_data) {
+        $parents[$key] = $term_data['parent'];
+      }
+      array_multisort($parents, SORT_ASC, $taxonomies[$taxonomy]);
+    }
+
     if (array_key_exists('drush', $form) && $form['drush'] === TRUE) {
       $context = [];
       $context['drush'] = TRUE;
