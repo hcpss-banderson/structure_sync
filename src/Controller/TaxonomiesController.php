@@ -317,6 +317,7 @@ class TaxonomiesController extends ControllerBase {
             if (count($tids) <= 0) {
               Term::create([
                 'vid' => $vid,
+                'uuid' => $taxonomy['uuid'],
                 'langcode' => $taxonomy['langcode'],
                 'name' => $taxonomy['name'],
                 'description' => [
