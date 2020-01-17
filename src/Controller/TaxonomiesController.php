@@ -87,13 +87,11 @@ class TaxonomiesController extends ControllerBase {
         $entity_properties = [
           'vid' => $vocabulary,
           'tid' => $entity->id(),
-          'langcode' => $entity->langcode->getValue()[0]['value'],
-          'name' => $entity->name->getValue()[0]['value'],
-          'description__value' => $entity->get('description')
-            ->getValue()[0]['value'],
-          'description__format' => $entity->get('description')
-            ->getValue()[0]['format'],
-          'weight' => $entity->weight->getValue()[0]['value'],
+          'langcode' => $entity->langcode->value,
+          'name' => $entity->name->value,
+          'description__value' => $entity->get('description')->value,
+          'description__format' => $entity->get('description')->format,
+          'weight' => $entity->weight->value,
           'parent' => isset($parents[$entity->id()]) ? $parents[$entity->id()] : '0',
           'uuid' => $entity->uuid(),
         ];
