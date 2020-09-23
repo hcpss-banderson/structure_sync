@@ -75,14 +75,14 @@ class MenuLinksController extends ControllerBase {
       ];
 
       if (array_key_exists('drush', $form) && $form['drush'] === TRUE) {
-        drush_log('Exported "' . $menuLink->title->getValue()[0]['value'] . '" of menu "' . $menuLink->menu_name->getValue()[0]['value'] . '"', 'ok');
+        \Drupal::logger('Exported "' . $menuLink->title->getValue()[0]['value'] . '" of menu "' . $menuLink->menu_name->getValue()[0]['value'] . '"', 'ok');
       }
       StructureSyncHelper::logMessage('Exported "' . $menuLink->title->value . '" of menu "' . $menuLink->menu_name->value . '"');
     }
 
     $this->config->set('menus', $customMenuLinks)->save();
 
-    drupal_set_message($this->t('The menu links have been successfully exported.'));
+    $this->messenger()->addStatus($this->t('The menu links have been successfully exported.'));
     StructureSyncHelper::logMessage('Menu links exported');
   }
 
@@ -232,7 +232,7 @@ class MenuLinksController extends ControllerBase {
     }
 
     if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-      drush_log('Deleted menu links that were not in config', 'ok');
+      \Drupal::logger('Deleted menu links that were not in config', 'ok');
     }
     StructureSyncHelper::logMessage('Deleted menu links that were not in config');
   }
@@ -341,7 +341,7 @@ class MenuLinksController extends ControllerBase {
           }
 
           if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-            drush_log('Imported "' . $menuLink['title'] . '" into ' . $menuLink['menu_name'], 'ok');
+            \Drupal::logger('Imported "' . $menuLink['title'] . '" into ' . $menuLink['menu_name'], 'ok');
           }
           StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into ' . $menuLink['menu_name']);
 
@@ -397,7 +397,7 @@ class MenuLinksController extends ControllerBase {
       ])->save();
 
       if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-        drush_log('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu', 'ok');
+        \Drupal::logger('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu', 'ok');
       }
       StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu');
     }
@@ -415,7 +415,7 @@ class MenuLinksController extends ControllerBase {
       ->delete($entities);
 
     if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-      drush_log('Deleted all (content) menu links', 'ok');
+      \Drupal::logger('Deleted all (content) menu links', 'ok');
     }
     StructureSyncHelper::logMessage('Deleted all (content) menu links');
   }
@@ -442,7 +442,7 @@ class MenuLinksController extends ControllerBase {
       ])->save();
 
       if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-        drush_log('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu', 'ok');
+        \Drupal::logger('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu', 'ok');
       }
       StructureSyncHelper::logMessage('Imported "' . $menuLink['title'] . '" into "' . $menuLink['menu_name'] . '" menu');
     }
@@ -460,7 +460,7 @@ class MenuLinksController extends ControllerBase {
 
     StructureSyncHelper::logMessage('Successfully imported menu links');
 
-    drupal_set_message(t('Successfully imported menu links'));
+    $this->messenger()->addStatus(t('Successfully imported menu links'));
   }
 
 }

@@ -90,12 +90,12 @@ class BlocksController extends ControllerBase {
 
     foreach ($customBlocks as $customBlock) {
       if (array_key_exists('drush', $form) && $form['drush'] === TRUE) {
-        drush_log('Exported "' . $customBlock['info'] . '"', 'ok');
+        \Drupal::logger('Exported "' . $customBlock['info'] . '"', 'ok');
       }
       StructureSyncHelper::logMessage('Exported "' . $customBlock['info'] . '"');
     }
 
-    drupal_set_message($this->t('The custom blocks have been successfully exported.'));
+    $this->messenger()->addStatus($this->t('The custom blocks have been successfully exported.'));
     StructureSyncHelper::logMessage('Custom blocks exported');
   }
 
@@ -245,7 +245,7 @@ class BlocksController extends ControllerBase {
     }
 
     if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-      drush_log('Deleted custom blocks that were not in config', 'ok');
+      \Drupal::logger('Deleted custom blocks that were not in config', 'ok');
     }
     StructureSyncHelper::logMessage('Deleted custom blocks that were not in config');
   }
@@ -296,7 +296,7 @@ class BlocksController extends ControllerBase {
         $blockContent->save();
 
         if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-          drush_log('Imported "' . $block['info'] . '"', 'ok');
+          \Drupal::logger('Imported "' . $block['info'] . '"', 'ok');
         }
         StructureSyncHelper::logMessage('Imported "' . $block['info'] . '"');
       }
@@ -319,7 +319,7 @@ class BlocksController extends ControllerBase {
             }
 
             if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-              drush_log('Updated "' . $block['info'] . '"', 'ok');
+              \Drupal::logger('Updated "' . $block['info'] . '"', 'ok');
             }
             StructureSyncHelper::logMessage('Updated "' . $block['info'] . '"');
 
@@ -372,7 +372,7 @@ class BlocksController extends ControllerBase {
       $blockContent->save();
 
       if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-        drush_log('Imported "' . $block['info'] . '"', 'ok');
+        \Drupal::logger('Imported "' . $block['info'] . '"', 'ok');
       }
       StructureSyncHelper::logMessage('Imported "' . $block['info'] . '"');
     }
@@ -390,7 +390,7 @@ class BlocksController extends ControllerBase {
       ->delete($entities);
 
     if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-      drush_log('Deleted all custom blocks', 'ok');
+      \Drupal::logger('Deleted all custom blocks', 'ok');
     }
     StructureSyncHelper::logMessage('Deleted all custom blocks');
   }
@@ -416,7 +416,7 @@ class BlocksController extends ControllerBase {
       $blockContent->save();
 
       if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-        drush_log('Imported "' . $block['info'] . '"', 'ok');
+        \Drupal::logger('Imported "' . $block['info'] . '"', 'ok');
       }
       StructureSyncHelper::logMessage('Imported "' . $block['info'] . '"');
     }
@@ -434,7 +434,7 @@ class BlocksController extends ControllerBase {
 
     StructureSyncHelper::logMessage('Successfully imported custom blocks');
 
-    drupal_set_message(t('Successfully imported custom blocks'));
+    $this->messenger()->addStatus(t('Successfully imported custom blocks'));
   }
 
 }

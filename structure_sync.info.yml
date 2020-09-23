@@ -1,6 +1,7 @@
 name: 'Structure Sync'
 description: 'Tool for syncing structural data that is stored as content.'
 core: 8.x
+core_version_requirement: ^8 || ^9
 configure: structure_sync.general.form
 dependencies:
   - drupal:taxonomy

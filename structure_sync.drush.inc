@@ -6,7 +6,7 @@
  */
 
 use Drupal\structure_sync\StructureSyncHelper;
-
+use Drush\Drush;
 /**
  * Implements hook_drush_command().
  */
@@ -93,11 +93,11 @@ function drush_structure_sync_export_all() {
  *   drush_{module_name}_{item_id_for_command}()
  */
 function drush_structure_sync_export_taxonomies() {
-  drush_print('Exporting taxonomies...');
+  Drush::output()->writeln('Exporting taxonomies...');
 
   StructureSyncHelper::exportTaxonomies(['drush' => TRUE]);
 
-  drush_log('Successfully exported taxonomies', 'ok');
+  \Drupal::logger('Successfully exported taxonomies', 'ok');
 }
 
 /**
@@ -107,7 +107,7 @@ function drush_structure_sync_export_taxonomies() {
  *   drush_{module_name}_{item_id_for_command}()
  */
 function drush_structure_sync_import_taxonomies($choice = FALSE) {
-  drush_print('Importing taxonomies...');
+  Drush::output()->writeln('Importing taxonomies...');
 
   $options = [
     'full' => 'Full',
@@ -120,17 +120,17 @@ function drush_structure_sync_import_taxonomies($choice = FALSE) {
   }
 
   if ($choice && array_key_exists($choice, $options)) {
-    drush_print('Using "' . $options[$choice] . '" import style');
+    Drush::output()->writeln('Using "' . $options[$choice] . '" import style');
 
     StructureSyncHelper::importTaxonomies([
       'style' => $choice,
       'drush' => TRUE,
     ]);
 
-    drush_log('Successfully imported taxonomies', 'ok');
+    \Drupal::logger('Successfully imported taxonomies', 'ok');
   }
   else {
-    drush_log('No choice made for import style on importing taxonomies', 'error');
+    \Drupal::logger('No choice made for import style on importing taxonomies', 'error');
   }
 }
 
@@ -141,11 +141,11 @@ function drush_structure_sync_import_taxonomies($choice = FALSE) {
  *   drush_{module_name}_{item_id_for_command}()
  */
 function drush_structure_sync_export_blocks() {
-  drush_print('Exporting blocks...');
+  Drush::output()->writeln('Exporting blocks...');
 
   StructureSyncHelper::exportCustomBlocks(['drush' => TRUE]);
 
-  drush_log('Successfully exported blocks', 'ok');
+  \Drupal::logger('Successfully exported blocks', 'ok');
 }
 
 /**
@@ -155,7 +155,7 @@ function drush_structure_sync_export_blocks() {
  *   drush_{module_name}_{item_id_for_command}()
  */
 function drush_structure_sync_import_blocks($choice = FALSE) {
-  drush_print('Importing blocks...');
+  Drush::output()->writeln('Importing blocks...');
 
   $options = [
     'full' => 'Full',
@@ -168,17 +168,17 @@ function drush_structure_sync_import_blocks($choice = FALSE) {
   }
 
   if ($choice && array_key_exists($choice, $options)) {
-    drush_print('Using "' . $options[$choice] . '" import style');
+    Drush::output()->writeln('Using "' . $options[$choice] . '" import style');
 
     StructureSyncHelper::importCustomBlocks([
       'style' => $choice,
       'drush' => TRUE,
     ]);
 
-    drush_log('Successfully imported custom blocks', 'ok');
+    \Drupal::logger('Successfully imported custom blocks', 'ok');
   }
   else {
-    drush_log('No choice made for import style on importing custom blocks', 'error');
+    \Drupal::logger('No choice made for import style on importing custom blocks', 'error');
   }
 }
 
@@ -189,11 +189,11 @@ function drush_structure_sync_import_blocks($choice = FALSE) {
  *   drush_{module_name}_{item_id_for_command}()
  */
 function drush_structure_sync_export_menus() {
-  drush_print('Exporting menu links...');
+  Drush::output()->writeln('Exporting menu links...');
 
   StructureSyncHelper::exportMenuLinks(['drush' => TRUE]);
 
-  drush_log('Successfully exported menu links', 'ok');
+  \Drupal::logger('Successfully exported menu links', 'ok');
 }
 
 /**
@@ -203,7 +203,7 @@ function drush_structure_sync_export_menus() {
  *   drush_{module_name}_{item_id_for_command}()
  */
 function drush_structure_sync_import_menus($choice = FALSE) {
-  drush_print('Importing menu links...');
+  Drush::output()->writeln('Importing menu links...');
 
   $options = [
     'full' => 'Full',
@@ -216,16 +216,16 @@ function drush_structure_sync_import_menus($choice = FALSE) {
   }
 
   if ($choice && array_key_exists($choice, $options)) {
-    drush_print('Using "' . $options[$choice] . '" import style');
+    Drush::output()->writeln('Using "' . $options[$choice] . '" import style');
 
     StructureSyncHelper::importMenuLinks([
       'style' => $choice,
       'drush' => TRUE,
     ]);
 
-    drush_log('Successfully imported menu links', 'ok');
+    \Drupal::logger('Successfully imported menu links', 'ok');
   }
   else {
-    drush_log('No choice made for import style on importing menu links', 'error');
+    \Drupal::logger('No choice made for import style on importing menu links', 'error');
   }
 }

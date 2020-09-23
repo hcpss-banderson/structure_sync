@@ -54,7 +54,7 @@ class TaxonomiesController extends ControllerBase {
     if (!count($vocabulary_list)) {
       StructureSyncHelper::logMessage('No vocabularies available', 'warning');
 
-      drupal_set_message($this->t('No vocabularies selected/available'), 'warning');
+      $this->messenger()->addWarning($this->t('No vocabularies selected/available'));
       return;
     }
 
@@ -144,12 +144,12 @@ class TaxonomiesController extends ControllerBase {
       $this->config->set('taxonomies.' . $vocabulary, $taxonomies)->save();
 
       if (array_key_exists('drush', $form) && $form['drush'] === TRUE) {
-        drush_log('Exported ' . $vocabulary, 'ok');
+        \Drupal::logger('Exported ' . $vocabulary, 'ok');
       }
       StructureSyncHelper::logMessage('Exported ' . $vocabulary);
     }
 
-    drupal_set_message($this->t('The taxonomies have been successfully exported.'));
+    $this->messenger()->addStatus($this->t('The taxonomies have been successfully exported.'));
     StructureSyncHelper::logMessage('Taxonomies exported');
   }
 
@@ -311,7 +311,7 @@ class TaxonomiesController extends ControllerBase {
     }
 
     if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-      drush_log('Deleted taxonomies that were not in config', 'ok');
+      \Drupal::logger('Deleted taxonomies that were not in config', 'ok');
     }
     StructureSyncHelper::logMessage('Deleted taxonomies that were not in config');
   }
@@ -465,7 +465,7 @@ class TaxonomiesController extends ControllerBase {
             }
 
             if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-              drush_log('Imported "' . $taxonomy['name'] . '" into ' . $vid, 'ok');
+              \Drupal::logger('Imported "' . $taxonomy['name'] . '" into ' . $vid, 'ok');
             }
             StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
 
@@ -494,7 +494,7 @@ class TaxonomiesController extends ControllerBase {
 
     StructureSyncHelper::logMessage('Flushing all caches');
     if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-      drush_log('Flushing all caches', 'ok');
+      \Drupal::logger('Flushing all caches', 'ok');
     }
 
     drupal_flush_all_caches();
@@ -615,7 +615,7 @@ class TaxonomiesController extends ControllerBase {
                 }
 
                 if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-                  drush_log('Imported "' . $taxonomy['name'] . '" into ' . $vid, 'ok');
+                  \Drupal::logger('Imported "' . $taxonomy['name'] . '" into ' . $vid, 'ok');
                 }
                 StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
 
@@ -675,7 +675,7 @@ class TaxonomiesController extends ControllerBase {
     $controller->delete($entities);
 
     if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-      drush_log('Deleted all taxonomies', 'ok');
+      \Drupal::logger('Deleted all taxonomies', 'ok');
     }
     StructureSyncHelper::logMessage('Deleted all taxonomies');
   }
@@ -782,7 +782,7 @@ class TaxonomiesController extends ControllerBase {
               }
 
               if (array_key_exists('drush', $context) && $context['drush'] === TRUE) {
-                drush_log('Imported "' . $taxonomy['name'] . '" into ' . $vid, 'ok');
+                \Drupal::logger('Imported "' . $taxonomy['name'] . '" into ' . $vid, 'ok');
               }
               StructureSyncHelper::logMessage('Imported "' . $taxonomy['name'] . '" into ' . $vid);
 
@@ -819,7 +819,7 @@ class TaxonomiesController extends ControllerBase {
   public static function taxonomiesImportFinishedCallback($success, $results, $operations) {
     StructureSyncHelper::logMessage('Successfully imported taxonomies');
 
-    drupal_set_message(t('Successfully imported taxonomies'));
+    $this->messenger()->addStatus(t('Successfully imported taxonomies'));
   }
 
 }

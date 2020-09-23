@@ -141,7 +141,7 @@ class TaxonomiesSyncForm extends ConfigFormBase {
       $vocabulary_list_config[$voc] = $vocabulary_list[$voc];
 
       if (!in_array($vocabulary_list_config[$voc], $vocabulary_list)) {
-        drupal_set_message($this->t('Vocabulary "@voc" does not (yet) exist on the site', ['@voc' => $voc]), 'warning');
+        $this->messenger()->addWarning($this->t('Vocabulary "@voc" does not (yet) exist on the site', ['@voc' => $voc]));
 
         unset($vocabulary_list_config[$voc]);
       }
